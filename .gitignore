@@ -1,10 +1,18 @@
-#Package files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-# Virtual environment
+# VS Code Editor
+.vscode/
+
+# Virtual Environment
 venv/
+
+# Secrets and Credentials
 .env
+crypto-groove-469515-c3-2dfaa6de654d.json
 
 # Learning files
 learning/
