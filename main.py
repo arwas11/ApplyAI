@@ -4,11 +4,21 @@ from google import genai
 import os
 
 from pydantic import BaseModel
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 load_dotenv()
 if not os.getenv("GEMINI_API_KEY"):
     raise ValueError("GEMINI_API_KEY not found in environment variables.")
 
+# Initialize Firebase
+cred = credentials.Certificate("crypto-groove-469515-c3-2dfaa6de654d.json")
+firebase_admin.initialize_app(cred)
+
+# Firestore client
+db = firestore.client()
+
+# Initialize FastAPI app
 app = FastAPI()
 
 # --- Pydantic Models ---
@@ -31,27 +41,49 @@ class ResumeTailorResponse(BaseModel):
 async def chat_with_agent(request: ChatRequest):
     """
     Endpoint to chat with the Gemini AI agent.
-    This endpoint takes a user's message and returns a response from the Gemini AI agent.
+    This endpoint takes a user's message, gets a response from the AI,
+    and saves the conversation to Firestore.
 
     Args:
-        request (ChatRequest): The request body containing the user's message.
-
+        request (ChatRequest): The request body containing the user's message. 
+    
     Returns:
-        ChatResponse: The response from the Gemini AI agent.
+        ChatResponse: The AI's response to the user's message.
     """
 
     try:     
-        # 1. Create a single client object
-        client = genai.Client()
-
-        # 2. Get the last user message from the request
         user_message = request.message
 
-        # 3. Send the message to the model
+        # Create a single client object
+        client = genai.Client()
+
+        # Send the message to the model
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=user_message,
         )
+        # Extract the AI's reply from the response
+        ai_reply = response.text
+
+        # Use a temporary, hardcoded user ID
+        temp_user_id = "user_abc_123"  # In a real app, use actual user IDs
+
+        # Save the conversation to Firestore
+        chat_data = {
+            "userId": temp_user_id,
+            "messages": [
+                {"role": "user", "content": user_message},
+                {"role": "ai", "content": ai_reply}
+            ],
+            "timestamp": firestore.SERVER_TIMESTAMP
+        }
+
+        # Use the db client to add the data to a 'chats' collection.
+        # Firestore will automatically create the collection if it doesn't exist.
+        doc_ref = db.collection("chats").add(chat_data)
+
+        # This will print the ID of the new document to your terminal for confirmation.
+        print(f"Saved chat with ID: {doc_ref[1].id}")
 
         # 4. Return the model's response
         return ChatResponse(response=response.text)
@@ -73,7 +105,7 @@ async def tailor_resume(request: ResumeTailorRequest):
     Returns:
         ResumeTailorResponse: The tailored resume.
     """
-    
+
     # This is the core logic: the prompt.
     # We're telling the AI to act as a career coach and rewrite the resume.
     prompt = f"""
