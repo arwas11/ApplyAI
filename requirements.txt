@@ -1,0 +1,8 @@
+
+fastapi
+uvicorn[standard]
+python-dotenv
+google-generativeai
+firebase-admin
+pydantic
+google-cloud-firestore
