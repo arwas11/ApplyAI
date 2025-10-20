@@ -12,11 +12,14 @@ if not os.getenv("GEMINI_API_KEY"):
     raise ValueError("GEMINI_API_KEY not found in environment variables.")
 
 # Initialize Firebase
-cred = credentials.Certificate("crypto-groove-469515-c3-2dfaa6de654d.json")
+cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if not cred_path:
+    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in environment variables.")
+cred = credentials.Certificate(cred_path)
 firebase_admin.initialize_app(cred)
 
 # Firestore client
-db = firestore.client()
+db = firestore.client(database_id='applyai')
 
 # Initialize FastAPI app
 app = FastAPI()

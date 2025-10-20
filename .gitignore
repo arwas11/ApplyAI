@@ -1,3 +1,7 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.pyc
@@ -12,7 +16,7 @@ venv/
 
 # Secrets and Credentials
 .env
-crypto-groove-469515-c3-2dfaa6de654d.json
+applyai-475622-6ebc0281eea9.json
 
 # Learning files
 learning/
