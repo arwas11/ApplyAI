@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Form
 from dotenv import load_dotenv
 from google import genai
 import os
@@ -97,18 +97,24 @@ async def chat_with_agent(request: ChatRequest):
 
 
 # --- Resume Tailoring Endpoint ---
+# --- Resume Tailoring Endpoint ---
 @app.post("/resume-tailor", response_model=ResumeTailorResponse, summary="Tailors Resume for a Job Description")
-async def tailor_resume(request: ResumeTailorRequest):
+async def tailor_resume(
+    base_resume: str = Form(),
+    job_description: str = Form()
+):
     """
     Endpoint to tailor a resume for a specific job description using Gemini AI.
+    This endpoint accepts form data, making it easy to paste multi-line text.
 
     Args:
-        request (ResumeTailorRequest): The request body containing the base resume and job description.
+        base_resume (str): The user's full, unformatted base resume text.
+        job_description (str): The full, unformatted job description text.
 
     Returns:
         ResumeTailorResponse: The tailored resume.
     """
-
+    
     # This is the core logic: the prompt.
     # We're telling the AI to act as a career coach and rewrite the resume.
     prompt = f"""
@@ -124,10 +130,10 @@ async def tailor_resume(request: ResumeTailorRequest):
 
     ---
     **Original Resume:**
-    {request.base_resume}
+    {base_resume}
     ---
     **Job Description:**
-    {request.job_description}
+    {job_description}
     ---
     **Tailored Resume:**
     """
@@ -141,5 +147,5 @@ async def tailor_resume(request: ResumeTailorRequest):
         return ResumeTailorResponse(tailored_resume=response.text)
 
     except Exception as e:
-        print(f"An error occured: {e}")
-        raise  HTTPException(status_code=500, detail="Failed to tailor resume.")
+        print(f"An error occurred: {e}")
+        raise  HTTPException(status_code=500, detail="Failed to tailor resume.") 
