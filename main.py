@@ -7,6 +7,9 @@ from pydantic import BaseModel
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+from utils import log_time_decorator
+
+# Load environment variables from .env file
 load_dotenv()
 if not os.getenv("GEMINI_API_KEY"):
     raise ValueError("GEMINI_API_KEY not found in environment variables.")
@@ -41,6 +44,7 @@ class ResumeTailorResponse(BaseModel):
 
 # --- API Endpoints ---
 @app.post("/chat", response_model=ChatResponse, summary="Handles Chat with Gemini AI Agent")
+@log_time_decorator
 async def chat_with_agent(request: ChatRequest):
     """
     Endpoint to chat with the Gemini AI agent.
@@ -97,8 +101,8 @@ async def chat_with_agent(request: ChatRequest):
 
 
 # --- Resume Tailoring Endpoint ---
-# --- Resume Tailoring Endpoint ---
 @app.post("/resume-tailor", response_model=ResumeTailorResponse, summary="Tailors Resume for a Job Description")
+@log_time_decorator
 async def tailor_resume(
     base_resume: str = Form(),
     job_description: str = Form()
