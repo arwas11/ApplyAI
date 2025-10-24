@@ -66,6 +66,42 @@ def test_chat_endpoint(mocker):
   mock_db_collection.return_value.add.assert_called_once()
 
 
+def test_resume_tailor_endpoint(sample_job_data, mocker):
+    """
+    Tests the /resume-tailor endpoint.
+
+    - Mocks the external Gemini API call.
+    - Uses the 'sample_job_data' fixture to send form data.
+    - Asserts that the status code is 200.
+    - Asserts that the correct JSON response is returned.
+    """
+    # Define a fake response object for the AI
+    class MockGeminiResponse:
+      text = "This is a fake tailored resume."
+
+    # Patch the genai.Client in the 'main' module
+    mock_gemini_client = mocker.patch("main.genai.Client")
+    
+    # Tell the mock client what to return when generate_content is called
+    mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()
+
+    # Make the API call using the test client
+    # We use 'data=' because the endpoint expects Form Data
+    response = client.post(
+        "/resume-tailor",
+        data={
+            "base_resume": sample_job_data["base_resume"],
+            "job_description": sample_job_data["job_description"]
+        }
+    )
+
+    assert response.status_code == 200
+    
+    assert response.json() == {
+        "tailored_resume": "This is a fake tailored resume."
+    }
+
+
 def test_fixture_is_working(sample_job_data):
     """
     This is a simple test to show how to use the fixture.
