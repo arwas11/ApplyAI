@@ -14,14 +14,10 @@ load_dotenv()
 if not os.getenv("GEMINI_API_KEY"):
     raise ValueError("GEMINI_API_KEY not found in environment variables.")
 
-# Initialize Firebase
-cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-if not cred_path:
-    raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in environment variables.")
-cred = credentials.Certificate(cred_path)
-firebase_admin.initialize_app(cred)
+# This automatically uses the Cloud Run service account
+firebase_admin.initialize_app() 
 
-# Firestore client
+# We still need to specify the database ID
 db = firestore.client(database_id='applyai')
 
 # Initialize FastAPI app

@@ -1,0 +1,17 @@
+# Git and VSCode
+.git
+.vscode
+
+# Python virtual environment and cache
+.venv
+__pycache__/
+
+# Mac system files
+.DS_Store
+
+# Secrets
+.env
+*.json
+
+# Test files (don't need them in production)
+test_main.py
