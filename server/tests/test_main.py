@@ -1,8 +1,35 @@
 import pytest
 from fastapi.testclient import TestClient
-from main import app, ChatRequest, ResumeTailorRequest
+from server.main import app
 
-# Create a client that can be used in all our tests
+@pytest.fixture(autouse=True)
+def mock_firebase(mocker):
+    """
+    Fixture to mock Firebase/Firestore before any tests run.
+    The autouse=True means this runs automatically for all tests.
+    """
+    # Create our mock Firestore client
+    class MockDocRef:
+        id = "fake_doc_id_123"
+    
+    mock_db_client = mocker.Mock()
+    mock_db_client.collection.return_value.add.return_value = (None, MockDocRef())
+    
+    # Mock the components in the correct order (before client creation)
+    mocker.patch("firebase_admin.credentials.Certificate")
+    mocker.patch("firebase_admin.initialize_app")
+    mock_fs_client = mocker.patch("firebase_admin.firestore.client")
+    mock_fs_client.return_value = mock_db_client
+    
+    # IMPORTANT: Set the global db variable in main.py
+    import server.main
+    server.main.db = mock_db_client
+    
+    # Clean up after the test
+    yield
+    server.main.db = None
+
+# Now create the client (after Firebase is mocked)
 client = TestClient(app)
 
 # Fixture for sample job data
@@ -27,43 +54,35 @@ def test_client_is_working():
 
 
 def test_chat_endpoint(mocker):
-  """
-  Tests the /chat endpoint.
-  It uses 'mocker' to fake the external AI and Database calls.
-  """
-  # Create a fake response object
-  class MockGeminiResponse:
-    text = 'This is a fake AI response.'
-
-  # Replace the real 'genai.Client'
-  mock_gemini_client = mocker.patch("main.genai.Client")
-
-  # Tell the fake client what to do when 'generate_content' is called
-  mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()
-
-    # Create a fake document reference
-  class MockDocRef:
-    id = "fake_doc_id_123"
-
-  # Replace the real 'db.collection'
-  mock_db_collection = mocker.patch("main.db.collection")
+    """
+    Tests the /chat endpoint.
+    It uses 'mocker' to fake the Gemini AI call.
+    Firebase/Firestore is already mocked by the mock_firebase fixture.
+    """
     
-  # Tell the fake collection what to do when 'add' is called
-  mock_db_collection.return_value.add.return_value = (None, MockDocRef())
+    # --- ARRANGE (Mocks) ---
+    
+    # Mock the Gemini Client API call
+    class MockGeminiResponse:
+        text = 'This is a fake AI response.'
 
-  # This is the data we'll send to our endpoint
-  test_message = {"message": "Hello, AI!"}
+    mock_gemini_client = mocker.patch("google.genai.Client")
+    mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()
 
-  # Call the /chat endpoint using the test client
-  response = client.post("/chat", json=test_message)
+    # --- ACT ---
+    test_message = {"message": "Hello, AI!"}
+    
+    # NOW, when we call client.post(), the lifespan runs...
+    # ...it calls the *mocked* firestore.client()...
+    # ...and our global 'db' variable in main.py gets set to our 'mock_db_client'.
+    response = client.post("/chat", json=test_message)
 
-  # 4. --- CHECK THE RESULTS ---
-  assert response.status_code == 200
-  
-  assert response.json() == {"response": "This is a fake AI response."}
-  
-  # Check that our mocks were called as expected
-  mock_db_collection.return_value.add.assert_called_once()
+    # --- ASSERT ---
+    assert response.status_code == 200
+    assert response.json() == {"response": "This is a fake AI response."}
+    
+    # Verify that Gemini was called as expected
+    mock_gemini_client.return_value.models.generate_content.assert_called_once()
 
 
 def test_resume_tailor_endpoint(sample_job_data, mocker):
@@ -80,7 +99,7 @@ def test_resume_tailor_endpoint(sample_job_data, mocker):
       text = "This is a fake tailored resume."
 
     # Patch the genai.Client in the 'main' module
-    mock_gemini_client = mocker.patch("main.genai.Client")
+    mock_gemini_client = mocker.patch("google.genai.Client")
     
     # Tell the mock client what to return when generate_content is called
     mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()

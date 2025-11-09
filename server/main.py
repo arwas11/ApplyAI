@@ -1,27 +1,70 @@
-from fastapi import FastAPI, HTTPException, Form
-from dotenv import load_dotenv
-from google import genai
 import os
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Form
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
+from google import genai
+from pydantic import BaseModel
 
-from utils import log_time_decorator
+from .utils import log_time_decorator
 
-# Load environment variables from .env file
-load_dotenv()
-if not os.getenv("GEMINI_API_KEY"):
-    raise ValueError("GEMINI_API_KEY not found in environment variables.")
+# --- Define db as None at the top level ---
+# It will be populated by the lifespan event
+db = None
 
-# This automatically uses the Cloud Run service account
-firebase_admin.initialize_app() 
+# --- NEW LIFESPAN EVENT HANDLER ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Handles application startup and shutdown events.
+    This code runs *only* when the app is started for real,
+    not when it's imported for testing.
+    """
+    # --- Code to run ON STARTUP ---
+    global db # Make 'db' available to the whole module
 
-# We still need to specify the database ID
-db = firestore.client(database_id='applyai')
+    # Get the directory that this file (main.py) is in
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    
+    # Create the full path to the .env file (e.g., .../server/.env)
+    dotenv_path = os.path.join(BASE_DIR, '.env')
 
-# Initialize FastAPI app
-app = FastAPI()
+    # Load that specific .env file
+    load_dotenv(dotenv_path=dotenv_path)
+
+    if not os.getenv("GEMINI_API_KEY"):
+        raise ValueError("GEMINI_API_KEY not found in environment variables.")
+
+    # --- 2. Make the credential path absolute ---
+    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+
+    if not cred_path:
+        raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in .env")
+
+    # If the path in .env is relative, make it absolute (relative to main.py)
+    if not os.path.isabs(cred_path):
+        cred_path = os.path.join(BASE_DIR, cred_path)
+    
+    # Check if the file *actually* exists before trying to use it
+    if not os.path.exists(cred_path):
+        raise FileNotFoundError(
+            f"Credential file not found. Looked at: {cred_path}"
+        )
+    
+    # We're running for real. Connect to the database.
+    firebase_admin.initialize_app()
+    db = firestore.client(database_id='applyai')
+    print("--- FastAPI app started, Firebase Initialized ---")
+    
+    yield # This is the point where the app is "running"
+    
+    # --- Code to run ON SHUTDOWN ---
+    print("--- FastAPI app shutting down ---")
+
+# --- Initialize FastAPI app WITH the new lifespan event ---
+app = FastAPI(lifespan=lifespan)
 
 # --- Pydantic Models ---
 class ChatRequest(BaseModel):

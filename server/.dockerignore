@@ -13,5 +13,6 @@ __pycache__/
 .env
 *.json
 
-# Test files (don't need them in production)
+# Test files
+tests/
 test_main.py
