@@ -1,0 +1,23 @@
+# Git and OS files
+.git
+.DS_Store
+*.json
+.env
+
+# VSCode
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+.venv/
+server/.venv/
+
+# Tests
+server/tests/
+pytest.ini
+
+# Client folder
+client/

@@ -1,20 +1,23 @@
-# 1. Start from an official, lightweight Python base image
-FROM python:3.11-slim
+# Start from an official, lightweight Python base image
+FROM python:3.12-slim
 
-# 2. Set the working directory inside the container
+# Set the working directory inside the container
 WORKDIR /app
 
-# 3. Copy *only* the requirements file and install dependencies
-# This step is cached, so it only re-runs if requirements.txt changes
-COPY requirements.txt .
+# Add the /app directory to Python's search path
+# This fixes "ModuleNotFoundError" by allowing main.py to import utils.py
+ENV PYTHONPATH "${PYTHONPATH}:/app"
+
+# Copy the requirements file *from the server subdirectory*
+COPY server/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy the rest of your application code into the container
-COPY . .
+# Copy the entire server directory *into* the /app directory
+COPY server/ .
 
-# 5. Tell Docker that the container will listen on port 8000
+# Tell Docker that the container will listen on port 8000
 EXPOSE 8000
 
-# 6. The command to run your app when the container starts
-#    --host 0.0.0.0 is CRITICAL to make it accessible
-CMD export PYTHONPATH=$PYTHONPATH:/app && uvicorn main:app --host 0.0.0.0 --port $PORT
+# Use the shell form (no brackets) so the $PORT variable is read correctly
+CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+

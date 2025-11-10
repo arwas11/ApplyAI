@@ -4,34 +4,28 @@ from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, Form
 import firebase_admin
-from firebase_admin import firestore
+from firebase_admin import credentials, firestore
 from google import genai
 from pydantic import BaseModel
+from utils import log_time_decorator
 
-from .utils import log_time_decorator
 
 # --- Define db as None at the top level ---
 # It will be populated by the lifespan event
 db = None
 
-# --- NEW LIFESPAN EVENT HANDLER ---
+
+# --- LIFESPAN EVENT HANDLER ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
     Handles application startup and shutdown events.
-    This code runs *only* when the app is started for real,
-    not when it's imported for testing.
     """
-    # --- Code to run ON STARTUP ---
-    global db # Make 'db' available to the whole module
+    global db  # Make 'db' available to the whole module
 
-    # Get the directory that this file (main.py) is in
+    # --- 1. Load .env file with absolute path ---
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    
-    # Create the full path to the .env file (e.g., .../server/.env)
-    dotenv_path = os.path.join(BASE_DIR, '.env')
-
-    # Load that specific .env file
+    dotenv_path = os.path.join(BASE_DIR, ".env")
     load_dotenv(dotenv_path=dotenv_path)
 
     if not os.getenv("GEMINI_API_KEY"):
@@ -39,50 +33,55 @@ async def lifespan(app: FastAPI):
 
     # --- 2. Make the credential path absolute ---
     cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-
     if not cred_path:
         raise ValueError("GOOGLE_APPLICATION_CREDENTIALS not found in .env")
 
     # If the path in .env is relative, make it absolute (relative to main.py)
     if not os.path.isabs(cred_path):
         cred_path = os.path.join(BASE_DIR, cred_path)
-    
+
     # Check if the file *actually* exists before trying to use it
     if not os.path.exists(cred_path):
-        raise FileNotFoundError(
-            f"Credential file not found. Looked at: {cred_path}"
-        )
-    
-    # We're running for real. Connect to the database.
-    firebase_admin.initialize_app()
-    db = firestore.client(database_id='applyai')
+        raise FileNotFoundError(f"Credential file not found. Looked at: {cred_path}")
+
+    # --- 3. Initialize Firebase with the guaranteed absolute path ---
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+    db = firestore.client(database_id="applyai")
     print("--- FastAPI app started, Firebase Initialized ---")
-    
-    yield # This is the point where the app is "running"
-    
+
+    yield  # This is the point where the app is "running"
+
     # --- Code to run ON SHUTDOWN ---
     print("--- FastAPI app shutting down ---")
 
+
 # --- Initialize FastAPI app WITH the new lifespan event ---
 app = FastAPI(lifespan=lifespan)
+
 
 # --- Pydantic Models ---
 class ChatRequest(BaseModel):
     message: str
 
+
 class ChatResponse(BaseModel):
     response: str
+
 
 class ResumeTailorRequest(BaseModel):
     base_resume: str
     job_description: str
+
 
 class ResumeTailorResponse(BaseModel):
     tailored_resume: str
 
 
 # --- API Endpoints ---
-@app.post("/chat", response_model=ChatResponse, summary="Handles Chat with Gemini AI Agent")
+@app.post(
+    "/chat", response_model=ChatResponse, summary="Handles Chat with Gemini AI Agent"
+)
 @log_time_decorator
 async def chat_with_agent(request: ChatRequest):
     """
@@ -91,13 +90,13 @@ async def chat_with_agent(request: ChatRequest):
     and saves the conversation to Firestore.
 
     Args:
-        request (ChatRequest): The request body containing the user's message. 
-    
+        request (ChatRequest): The request body containing the user's message.
+
     Returns:
         ChatResponse: The AI's response to the user's message.
     """
 
-    try:     
+    try:
         user_message = request.message
 
         # Create a single client object
@@ -119,9 +118,9 @@ async def chat_with_agent(request: ChatRequest):
             "userId": temp_user_id,
             "messages": [
                 {"role": "user", "content": user_message},
-                {"role": "ai", "content": ai_reply}
+                {"role": "ai", "content": ai_reply},
             ],
-            "timestamp": firestore.SERVER_TIMESTAMP
+            "timestamp": firestore.SERVER_TIMESTAMP,
         }
 
         # Use the db client to add the data to a 'chats' collection.
@@ -136,16 +135,19 @@ async def chat_with_agent(request: ChatRequest):
 
     except Exception as e:
         print(f"An error occured: {e}")
-        raise  HTTPException(status_code=500, detail="Failed to get reponst from AI model")
+        raise HTTPException(
+            status_code=500, detail="Failed to get reponst from AI model"
+        )
 
 
 # --- Resume Tailoring Endpoint ---
-@app.post("/resume-tailor", response_model=ResumeTailorResponse, summary="Tailors Resume for a Job Description")
+@app.post(
+    "/resume-tailor",
+    response_model=ResumeTailorResponse,
+    summary="Tailors Resume for a Job Description",
+)
 @log_time_decorator
-async def tailor_resume(
-    base_resume: str = Form(),
-    job_description: str = Form()
-):
+async def tailor_resume(base_resume: str = Form(), job_description: str = Form()):
     """
     Endpoint to tailor a resume for a specific job description using Gemini AI.
     This endpoint accepts form data, making it easy to paste multi-line text.
@@ -157,7 +159,7 @@ async def tailor_resume(
     Returns:
         ResumeTailorResponse: The tailored resume.
     """
-    
+
     # This is the core logic: the prompt.
     # We're telling the AI to act as a career coach and rewrite the resume.
     prompt = f"""
@@ -191,4 +193,4 @@ async def tailor_resume(
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        raise  HTTPException(status_code=500, detail="Failed to tailor resume.") 
+        raise HTTPException(status_code=500, detail="Failed to tailor resume.")

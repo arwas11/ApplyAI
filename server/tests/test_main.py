@@ -2,35 +2,40 @@ import pytest
 from fastapi.testclient import TestClient
 from server.main import app
 
+
 @pytest.fixture(autouse=True)
 def mock_firebase(mocker):
     """
     Fixture to mock Firebase/Firestore before any tests run.
     The autouse=True means this runs automatically for all tests.
     """
+
     # Create our mock Firestore client
     class MockDocRef:
         id = "fake_doc_id_123"
-    
+
     mock_db_client = mocker.Mock()
     mock_db_client.collection.return_value.add.return_value = (None, MockDocRef())
-    
+
     # Mock the components in the correct order (before client creation)
     mocker.patch("firebase_admin.credentials.Certificate")
     mocker.patch("firebase_admin.initialize_app")
     mock_fs_client = mocker.patch("firebase_admin.firestore.client")
     mock_fs_client.return_value = mock_db_client
-    
+
     # IMPORTANT: Set the global db variable in main.py
     import server.main
+
     server.main.db = mock_db_client
-    
+
     # Clean up after the test
     yield
     server.main.db = None
 
+
 # Now create the client (after Firebase is mocked)
 client = TestClient(app)
+
 
 # Fixture for sample job data
 @pytest.fixture
@@ -41,8 +46,9 @@ def sample_job_data():
     """
     return {
         "base_resume": "I am a software engineer.",
-        "job_description": "We need a Python developer."
+        "job_description": "We need a Python developer.",
     }
+
 
 def test_client_is_working():
     """
@@ -59,19 +65,21 @@ def test_chat_endpoint(mocker):
     It uses 'mocker' to fake the Gemini AI call.
     Firebase/Firestore is already mocked by the mock_firebase fixture.
     """
-    
+
     # --- ARRANGE (Mocks) ---
-    
+
     # Mock the Gemini Client API call
     class MockGeminiResponse:
-        text = 'This is a fake AI response.'
+        text = "This is a fake AI response."
 
     mock_gemini_client = mocker.patch("google.genai.Client")
-    mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()
+    mock_gemini_client.return_value.models.generate_content.return_value = (
+        MockGeminiResponse()
+    )
 
     # --- ACT ---
     test_message = {"message": "Hello, AI!"}
-    
+
     # NOW, when we call client.post(), the lifespan runs...
     # ...it calls the *mocked* firestore.client()...
     # ...and our global 'db' variable in main.py gets set to our 'mock_db_client'.
@@ -80,7 +88,7 @@ def test_chat_endpoint(mocker):
     # --- ASSERT ---
     assert response.status_code == 200
     assert response.json() == {"response": "This is a fake AI response."}
-    
+
     # Verify that Gemini was called as expected
     mock_gemini_client.return_value.models.generate_content.assert_called_once()
 
@@ -94,15 +102,18 @@ def test_resume_tailor_endpoint(sample_job_data, mocker):
     - Asserts that the status code is 200.
     - Asserts that the correct JSON response is returned.
     """
+
     # Define a fake response object for the AI
     class MockGeminiResponse:
-      text = "This is a fake tailored resume."
+        text = "This is a fake tailored resume."
 
     # Patch the genai.Client in the 'main' module
     mock_gemini_client = mocker.patch("google.genai.Client")
-    
+
     # Tell the mock client what to return when generate_content is called
-    mock_gemini_client.return_value.models.generate_content.return_value = MockGeminiResponse()
+    mock_gemini_client.return_value.models.generate_content.return_value = (
+        MockGeminiResponse()
+    )
 
     # Make the API call using the test client
     # We use 'data=' because the endpoint expects Form Data
@@ -110,15 +121,13 @@ def test_resume_tailor_endpoint(sample_job_data, mocker):
         "/resume-tailor",
         data={
             "base_resume": sample_job_data["base_resume"],
-            "job_description": sample_job_data["job_description"]
-        }
+            "job_description": sample_job_data["job_description"],
+        },
     )
 
     assert response.status_code == 200
-    
-    assert response.json() == {
-        "tailored_resume": "This is a fake tailored resume."
-    }
+
+    assert response.json() == {"tailored_resume": "This is a fake tailored resume."}
 
 
 def test_fixture_is_working(sample_job_data):
