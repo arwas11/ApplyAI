@@ -1,160 +1,155 @@
 # ApplyAI — AI Job Application Assistant
 
-ApplyAI is a cloud-native, AI-powered assistant that helps streamline job search. The MVP focuses on shortening application time, increasing application volume, and improving the quality of each submission by providing AI-driven resume tailoring, conversational career guidance, and draft answers to application questions.
+ApplyAI is a cloud-native, AI-powered assistant that helps streamline the job search. The MVP focuses on shortening application time, increasing application volume, and improving the quality of each submission by providing AI-driven resume tailoring and conversational career guidance.
 
 ## Table of contents
 
 - [Overview & Goals](#overview--goals)
-- [User stories](#user-stories)
 - [Architecture & Tech Stack](#architecture--tech-stack)
 - [Core features](#core-features)
 - [Data model (Firestore)](#data-model-firestore)
 - [Getting started (local development)](#getting-started-local-development)
 - [Deployment notes](#deployment-notes)
 - [Next steps](#next-steps)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## Overview & Goals
 
 ApplyAI helps job seekers automate and improve their job applications. The MVP aims to:
 
-- Reduce application time by automating tailored materials
-- Increase application throughput by making it easy to generate many high-quality applications
-- Improve users' skills through iterative AI-guided feedback
-- Maximize job-fit relevance by emphasizing the most relevant skills in tailored resumes and answers
-
-## User stories
-
-User stories (MVP):
-
-- Chat with an AI agent about career goals and potential opportunities.
-- Input a job description and get a tailored resume that highlights the most relevant skills and experiences.
-- Provide application questions and receive AI-generated draft answers based on the user's resume and the job description.
-- Maintain chat history so the assistant becomes more personalized over time.
+- Reduce application time by automating tailored materials.
+- Increase application throughput by making it easy to generate high-quality applications.
+- Maximize job-fit relevance by emphasizing the most relevant skills in tailored resumes.
 
 ## Architecture & Tech Stack
+```
+This project is a full-stack, decoupled application.
 
-High-level architecture:
-
-[User Browser] <--> [Next.js (React) Frontend on Firebase Hosting]
-					|
-					v
+[User Browser (localhost)] <--> [Next.js (React) Frontend]
+          |
+          v
 [FastAPI Backend on Cloud Run] <--> [Gemini API]
-					|
-					v
+          |
+          v
 [Firestore Database]
+```
+---
 
-Stack choices and rationale:
+### Stack & Rationale
 
-- Frontend: React + Next.js + Tailwind — fast, component-based UI and good developer ergonomics.
-- Backend: Python + FastAPI — quick to develop, high performance, easy integration with AI APIs.
-- AI Model: Google Gemini API — chosen for high-quality generation across chat, resume tailoring, and question-answering.
-- Database: Firestore — serverless NoSQL for chat history, user profiles, and resume versions.
-- Auth: Firebase Authentication — simple, secure sign-in for users.
+- **Frontend:** **React (Next.js)** + **TypeScript** + **Tailwind CSS**
+  - *Why:* A modern, production-grade React framework for fast, type-safe, and beautifully styled component-based UI.
+- **Backend:** **Python** + **FastAPI**
+  - *Why:* High-performance, asynchronous-first framework that's perfect for I/O-bound tasks like calling external AI APIs.
+- **AI Model:** **Google Gemini API**
+  - *Why:* High-quality generation for conversational chat and complex text-rewriting tasks.
+- **Database:** **Google Firestore (NoSQL)**
+  - *Why:* A serverless, scalable document database for storing unstructured data like chat history.
+- **DevOps:** **Docker** + **Google Cloud Run** + **GitHub Actions (Pre-Commit)**
+  - *Why:* A containerized, serverless-first deployment that scales to zero, with professional, automated linting and formatting.
 
 ## Core features
 
-1) AI Chat Agent
+1.  **AI Chat Agent (Backend Implemented)**
+    - `POST /chat` endpoint that takes a user message and returns a Gemini-powered response.
+    - Saves conversation history to the `chats` collection in Firestore.
 
-- Streamed conversational interface.
-- Backend collects recent chat history from Firestore to provide context and personalization.
-
-2) Resume Tailoring
-
-- Users upload a base resume (Markdown, PDF, or JSON) and paste a job description.
-- A `/tailor-resume` endpoint crafts prompts for the Gemini API to produce a tailored resume emphasizing relevant skills.
-
-3) Application Question Answering
-
-- Users enter application questions (e.g., "Why this role?") and receive draft answers derived from their base resume and the job description.
-
-4) Chat history & personalization
-
-- Conversations are saved in Firestore and used to provide context on subsequent requests.
+2.  **Resume Tailoring (Full-Stack Implemented)**
+    - `POST /resume-tailor` endpoint that accepts a base resume and job description via `FormData`.
+    - Crafts a detailed prompt for the Gemini API to rewrite the resume, emphasizing skills relevant to the job.
+    - A functional Next.js UI to submit the form and render the AI's response.
 
 ## Data model (Firestore)
 
-Two main collections are used:
-
-- `users` (document ID = `userId`)
-	- `email` (string)
-	- `createdAt` (timestamp)
-	- `baseResume` (JSON object)
-
-- `chats` (document ID = `chatId`)
-	- `userId` (reference)
-	- `createdAt` (timestamp)
-	- `messages` (array of { role: 'user'|'assistant', content: string })
+- `chats` (collection)
+  - `chatId` (document)
+    - `userId` (string, e.g., "user_abc_123")
+    - `createdAt` (timestamp)
+    - `messages` (array of `{ role: 'user'|'ai', content: string }`)
 
 ## Getting started (local development)
 
-This repository currently contains the project skeleton. The following steps outline how to set up the backend and frontend for local development.
+This repository is a monorepo containing both the `client` and `server`.
 
-1) Prerequisites
+### Prerequisites
 
-- Python 3.10+ (recommended)
-- Node.js 18+ and npm or yarn
-- Google Cloud project with Firestore and the Gemini API enabled (or other LLM provider configured)
-- Firebase project for Authentication and Hosting (optional for local testing)
+- Python 3.12+
+- Node.js 18+ and `npm`
+- A Google Cloud project with:
+  1.  Firestore (in Native Mode) enabled.
+  2.  Gemini API enabled.
+  3.  A service account with `Cloud Datastore User` and `Secret Manager Secret Accessor` roles.
+  4.  A downloaded JSON key for that service account.
 
-2) Backend (FastAPI)
+### 1) Backend (`server/`)
 
-- Create and activate a virtual environment
+1.  **Navigate to the server directory:**
+    ```bash
+    cd server
+    ```
+2.  **Create and activate a virtual environment:**
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
+3.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  **Configure environment variables:**
+    - Create a `.env` file in the `server/` directory.
+    - Add your credentials:
+      ```
+      GEMINI_API_KEY="your-gemini-api-key-here"
+      GOOGLE_APPLICATION_CREDENTIALS=your-service-account-file.json
+      ```
+    - Make sure your `.json` key file is also in the `server/` folder.
+5.  **Run the backend locally:**
+    (Run this from the **root `ApplyAI/` folder** to ensure Python paths work)
+    ```bash
+    PYTHONPATH=$PYTHONPATH:$(pwd)/server uvicorn server.main:app --reload
+    ```
+    The API will be live at `http://127.0.0.1:8000/docs`.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+### 2) Frontend (`client/`)
 
-- Configure environment variables (example):
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"
-export FIREBASE_PROJECT_ID="your-gcp-project-id"
-export GEMINI_API_KEY="your-gemini-api-key"
-export FASTAPI_PORT=8000
-```
-
-- Run the backend locally
-
-```bash
-uvicorn main:app --reload --port ${FASTAPI_PORT}
-```
-
-3) Frontend (Next.js)
-
-- Install dependencies and run dev server
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-4) Notes about AI provider
-
-- The design targets Google's Gemini API, but the backend is written to be provider-agnostic. You can configure a different LLM endpoint by setting the relevant environment variables and updating the API client module.
+1.  **Navigate to the client directory:**
+    (From the root folder)
+    ```bash
+    cd client
+    ```
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+3.  **Configure environment variables:**
+    - Create a `.env.local` file in the `client/` directory.
+    - Add the *live deployed URL* of your backend (not localhost):
+      ```
+      NEXT_PUBLIC_API_URL=https://applyai-backend-service-....a.run.app
+      ```
+4.  **Run the frontend locally:**
+    ```bash
+    npm run dev
+    ```
+    The app will be live at `http://localhost:3000`.
 
 ## Deployment notes
 
-- Backend: Deploy the FastAPI app to Cloud Run. Use the provided Dockerfile (if present) or create one following Cloud Run best practices. Ensure the service account used by Cloud Run has access to Firestore and any other GCP APIs in use.
-- Frontend: Deploy the Next.js app to Firebase Hosting or Vercel.
-- Authentication: Use Firebase Authentication for sign-in flows. Protect backend endpoints with Firebase token verification.
+The backend is containerized and deployed to **Google Cloud Run**.
+
+- **Image:** Built from `server/Dockerfile` and hosted on **Google Artifact Registry**.
+- **Authentication:** The Cloud Run service uses its default service account. We granted this account the `Cloud Datastore User` role (for Firestore) and `Secret Manager Secret Accessor` role (for the Gemini key).
+- **Secrets:** The `GEMINI_API_KEY` is securely injected into the container from **Google Secret Manager**.
+- **CORS:** The FastAPI app uses `CORSMiddleware` to allow requests from `http://localhost:3000` (for local dev) and will need to be updated with the production frontend URL.
 
 ## Next steps
 
-- Implement endpoints: `/chat`, `/tailor-resume`, `/answer-question`.
-- Add CI: linting, type checks, and unit tests.
-- Build a minimal frontend UI for chat and resume tailoring flows.
-- Add streaming support for assistant responses.
-- Add rate-limiting and usage controls.
-
-## Contributing
-
-Please open issues or pull requests. For major changes, open an issue first to discuss what you'd like to change.
+- [ ] Render the tailored resume as Markdown, not plain text.
+- [ ] Implement the frontend UI for the `/chat` endpoint.
+- [ ] Add a full CI/CD pipeline with GitHub Actions to auto-test and deploy the backend.
+- [ ] Implement full user authentication (e.g., Firebase Auth) and link it to the `userId` in Firestore.
 
 ## License
 
-This project is MIT licensed — see the LICENSE file for details.
+See the [LICENSE](LICENSE) file for details.
