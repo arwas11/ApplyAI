@@ -2,12 +2,14 @@ import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
+from utils import log_time_decorator
+
 from fastapi import FastAPI, HTTPException, Form
+from fastapi.middleware.cors import CORSMiddleware
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google import genai
 from pydantic import BaseModel
-from utils import log_time_decorator
 
 
 # --- Define db as None at the top level ---
@@ -58,6 +60,20 @@ async def lifespan(app: FastAPI):
 
 # --- Initialize FastAPI app WITH the new lifespan event ---
 app = FastAPI(lifespan=lifespan)
+
+# Define the "origins" (websites) that are allowed to talk to the API
+origins = [
+    "http://localhost:3000",  # local frontend
+    # "https://prod-frontend-url.com" # We'll add this later
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,  # Allow cookies (if we use them later)
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # --- Pydantic Models ---
