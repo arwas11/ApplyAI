@@ -1,8 +1,7 @@
 "use client";
-import { setMaxIdleHTTPParsers } from "http";
-import { resolve } from "path";
 import { useState } from "react";
 import type { MouseEvent } from "react";
+import ResumeDisplay from "./ResumeDisplay"
 
 // The URL for the deployed backend.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -118,19 +117,7 @@ export default function Chat() {
       )}
 
       {/* Tailored Resume Output */}
-      {tailoredResume && (
-        <div className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-gray-200">
-            Your Tailored Resume:
-          </h2>
-          <div className="rounded-md border border-gray-600 bg-gray-800 p-4 text-gray-100">
-            {/* We'll just display the raw text for now */}
-            <pre className="whitespace-pre-wrap font-sans">
-              {tailoredResume}
-            </pre>
-          </div>
-        </div>
-      )}
+      <ResumeDisplay tailoredResume={tailoredResume}  />
     </form>
   );
 }
