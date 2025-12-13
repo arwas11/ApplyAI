@@ -30,8 +30,8 @@ export default function Chat() {
     formData.append("job_description", jobDescription);
 
     try{
-      // Make the API call to /resume-tailor endpoint
-      const response = await fetch(`${API_URL}/resume-tailor`, {
+      // Make the API call to /resumes endpoint
+      const response = await fetch(`${API_URL}/resumes`, {
         method: "POST",
         body: formData,
       });
