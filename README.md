@@ -22,50 +22,61 @@ ApplyAI helps job seekers automate and improve their job applications. The MVP a
 - Maximize job-fit relevance by emphasizing the most relevant skills in tailored resumes.
 
 ## Architecture & Tech Stack
-```
-This project is a full-stack, decoupled application.
 
-[User Browser (localhost)] <--> [Next.js (React) Frontend]
+This project is a full-stack, decoupled application.
+```
+[User Browser (localhost)] <--> [Next.js (React) Frontend] <--> [Firebase Auth]
           |
           v
-[FastAPI Backend on Cloud Run] <--> [Gemini API]
+[FastAPI Backend (Local/Cloud)] <--> [Gemini API]
           |
           v
 [Firestore Database]
 ```
----
 
 ### Stack & Rationale
 
 - **Frontend:** **React (Next.js)** + **TypeScript** + **Tailwind CSS**
   - *Why:* A modern, production-grade React framework for fast, type-safe, and beautifully styled component-based UI.
+- **Auth:** **Firebase Authentication** (Google OAuth)
+  - *Why:* Secure, easy-to-implement identity management that integrates natively with Firestore.
 - **Backend:** **Python** + **FastAPI**
   - *Why:* High-performance, asynchronous-first framework that's perfect for I/O-bound tasks like calling external AI APIs.
 - **AI Model:** **Google Gemini API**
   - *Why:* High-quality generation for conversational chat and complex text-rewriting tasks.
 - **Database:** **Google Firestore (NoSQL)**
   - *Why:* A serverless, scalable document database for storing unstructured data like chat history.
-- **DevOps:** **Docker** + **Google Cloud Run** + **GitHub Actions (Pre-Commit)**
-  - *Why:* A containerized, serverless-first deployment that scales to zero, with professional, automated linting and formatting.
+- **DevOps:** **Docker** + **Google Cloud Run**
+  - *Why:* A containerized, serverless-first deployment that scales to zero.
 
 ## Core features
 
-1.  **AI Chat Agent (Backend Implemented)**
-    - `POST /chat` endpoint that takes a user message and returns a Gemini-powered response.
-    - Saves conversation history to the `chats` collection in Firestore.
+1.  **Authentication (Frontend Implemented)**
+    - Secure Google Sign-In via Firebase.
+    - Global session management using React Context.
 
 2.  **Resume Tailoring (Full-Stack Implemented)**
-    - `POST /resume-tailor` endpoint that accepts a base resume and job description via `FormData`.
-    - Crafts a detailed prompt for the Gemini API to rewrite the resume, emphasizing skills relevant to the job.
-    - A functional Next.js UI to submit the form and render the AI's response.
+    - `POST /resumes` endpoint that accepts a base resume and job description.
+    - Generates a tailored resume using Gemini and renders it as formatted Markdown.
+    - Saves the result to Firestore linked to the user.
+
+3.  **AI Chat Agent (Backend Implemented)**
+    - `POST /chat` endpoint that takes a user message and returns a Gemini-powered response.
 
 ## Data model (Firestore)
 
 - `chats` (collection)
   - `chatId` (document)
-    - `userId` (string, e.g., "user_abc_123")
-    - `createdAt` (timestamp)
+    - `userId` (string)
     - `messages` (array of `{ role: 'user'|'ai', content: string }`)
+
+- `tailored_resumes` (collection)
+  - `resumeId` (document)
+    - `userId` (string)
+    - `originalResume` (string)
+    - `jobDescription` (string)
+    - `tailoredResume` (string - Markdown)
+    - `createdAt` (timestamp)
 
 ## Getting started (local development)
 
@@ -75,11 +86,7 @@ This repository is a monorepo containing both the `client` and `server`.
 
 - Python 3.12+
 - Node.js 18+ and `npm`
-- A Google Cloud project with:
-  1.  Firestore (in Native Mode) enabled.
-  2.  Gemini API enabled.
-  3.  A service account with `Cloud Datastore User` and `Secret Manager Secret Accessor` roles.
-  4.  A downloaded JSON key for that service account.
+- A Google Cloud project with Firestore, Gemini API, and Firebase Auth enabled.
 
 ### 1) Backend (`server/`)
 
@@ -97,24 +104,21 @@ This repository is a monorepo containing both the `client` and `server`.
     pip install -r requirements.txt
     ```
 4.  **Configure environment variables:**
-    - Create a `.env` file in the `server/` directory.
-    - Add your credentials:
-      ```
-      GEMINI_API_KEY="your-gemini-api-key-here"
-      GOOGLE_APPLICATION_CREDENTIALS=your-service-account-file.json
-      ```
-    - Make sure your `.json` key file is also in the `server/` folder.
-5.  **Run the backend locally:**
-    (Run this from the **root `ApplyAI/` folder** to ensure Python paths work)
-    ```bash
-    PYTHONPATH=$PYTHONPATH:$(pwd)/server uvicorn server.main:app --reload
+    Create a `.env` file in `server/` with:
     ```
-    The API will be live at `http://127.0.0.1:8000/docs`.
+    GEMINI_API_KEY="your-gemini-api-key"
+    GOOGLE_APPLICATION_CREDENTIALS="path/to/service-account.json"
+    ```
+5.  **Run the backend locally:**
+    (Run from root folder)
+    ```bash
+    PYTHONPATH=$PYTHONPATH:$(pwd)/server uvicorn server.main:app --reload --port 8000
+    ```
+    API docs: `http://127.0.0.1:8000/docs`
 
 ### 2) Frontend (`client/`)
 
 1.  **Navigate to the client directory:**
-    (From the root folder)
     ```bash
     cd client
     ```
@@ -123,32 +127,39 @@ This repository is a monorepo containing both the `client` and `server`.
     npm install
     ```
 3.  **Configure environment variables:**
-    - Create a `.env.local` file in the `client/` directory.
-    - Add the *live deployed URL* of your backend (not localhost):
-      ```
-      NEXT_PUBLIC_API_URL=https://applyai-backend-service-....a.run.app
-      ```
+    Create a `.env.local` file in `client/` with:
+    ```bash
+    # Point to your local Python backend
+    NEXT_PUBLIC_API_URL=[http://127.0.0.1:8000](http://127.0.0.1:8000)
+
+    # Firebase Configuration (Get these from Firebase Console)
+    NEXT_PUBLIC_FIREBASE_API_KEY=...
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=...
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+    NEXT_PUBLIC_FIREBASE_APP_ID=...
+    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
+    ```
 4.  **Run the frontend locally:**
     ```bash
     npm run dev
     ```
-    The app will be live at `http://localhost:3000`.
+    App: `http://localhost:3000`
 
 ## Deployment notes
 
-The backend is containerized and deployed to **Google Cloud Run**.
+The backend is deployed to **Google Cloud Run**. The frontend is currently local but can be deployed to Vercel or Firebase Hosting.
 
-- **Image:** Built from `server/Dockerfile` and hosted on **Google Artifact Registry**.
-- **Authentication:** The Cloud Run service uses its default service account. We granted this account the `Cloud Datastore User` role (for Firestore) and `Secret Manager Secret Accessor` role (for the Gemini key).
-- **Secrets:** The `GEMINI_API_KEY` is securely injected into the container from **Google Secret Manager**.
-- **CORS:** The FastAPI app uses `CORSMiddleware` to allow requests from `http://localhost:3000` (for local dev) and will need to be updated with the production frontend URL.
+- **CORS:** The FastAPI app allows requests from `http://localhost:3000`. For production, update `server/main.py` with the deployed frontend domain.
 
 ## Next steps
 
-- [ ] Render the tailored resume as Markdown, not plain text.
+- [x] Render the tailored resume as Markdown.
+- [x] Implement full user authentication (Firebase Auth).
+- [ ] Connect Frontend User ID to Backend (Save real user data).
 - [ ] Implement the frontend UI for the `/chat` endpoint.
-- [ ] Add a full CI/CD pipeline with GitHub Actions to auto-test and deploy the backend.
-- [ ] Implement full user authentication (e.g., Firebase Auth) and link it to the `userId` in Firestore.
+- [ ] Add a full CI/CD pipeline with GitHub Actions.
 
 ## License
 
