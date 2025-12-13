@@ -42,7 +42,7 @@ client = TestClient(app)
 def sample_job_data():
     """
     A fixture that provides a sample resume and job description
-    for testing the /resume-tailor endpoint.
+    for testing the /resumes endpoint.
     """
     return {
         "base_resume": "I am a software engineer.",
@@ -95,7 +95,7 @@ def test_chat_endpoint(mocker):
 
 def test_resume_tailor_endpoint(sample_job_data, mocker):
     """
-    Tests the /resume-tailor endpoint.
+    Tests the /resumes endpoint.
 
     - Mocks the external Gemini API call.
     - Uses the 'sample_job_data' fixture to send form data.
@@ -118,7 +118,7 @@ def test_resume_tailor_endpoint(sample_job_data, mocker):
     # Make the API call using the test client
     # We use 'data=' because the endpoint expects Form Data
     response = client.post(
-        "/resume-tailor",
+        "/resumes",
         data={
             "base_resume": sample_job_data["base_resume"],
             "job_description": sample_job_data["job_description"],

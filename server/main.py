@@ -1,3 +1,4 @@
+import datetime
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
@@ -156,14 +157,14 @@ async def chat_with_agent(request: ChatRequest):
         )
 
 
-# --- Resume Tailoring Endpoint ---
+# --- Resumes Endpoint ---
 @app.post(
-    "/resume-tailor",
+    "/resumes",
     response_model=ResumeTailorResponse,
-    summary="Tailors Resume for a Job Description",
+    summary="Generates a tailored resume",
 )
 @log_time_decorator
-async def tailor_resume(base_resume: str = Form(), job_description: str = Form()):
+async def generate_resume(base_resume: str = Form(), job_description: str = Form()):
     """
     Endpoint to tailor a resume for a specific job description using Gemini AI.
     This endpoint accepts form data, making it easy to paste multi-line text.
@@ -198,15 +199,33 @@ async def tailor_resume(base_resume: str = Form(), job_description: str = Form()
     ---
     **Tailored Resume:**
     """
-
     try:
         client = genai.Client()
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
         )
-        return ResumeTailorResponse(tailored_resume=response.text)
+
+        tailored_resume_obj = ResumeTailorResponse(tailored_resume=response.text)
+
+        resume_record = {
+            "userId": "demo_user_123",
+            "originalResume": base_resume,
+            "jobDescription": job_description,
+            "tailoredResume": tailored_resume_obj.tailored_resume,
+            "createdAt": datetime.datetime.now(datetime.timezone.utc),
+            "meta": {"modelUsed": "gemini-1.5-flash", "processingTimeMs": 1200},
+        }
+
+        # Save to Firestore
+        # Note: We use 'await' if we were using an async driver, but firebase-admin is sync.
+        # Ideally, we'd run this in a threadpool to not block, but for MVP this is okay.
+        if db:  # Safety check if db connection failed
+            doc_ref = db.collection("tailored_resumes").add(resume_record)
+            print(f"Saved resume with ID: {doc_ref[1].id}")
+
+        return tailored_resume_obj
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        raise HTTPException(status_code=500, detail="Failed to tailor resume.")
+        raise HTTPException(status_code=500, detail="Failed to generate resume.")
