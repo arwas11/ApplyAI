@@ -1,2 +1,30 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+@theme {
+  /* Define our custom colors here */
+  /* These automatically become classes like bg-primary, text-secondary */
+  --color-primary: #E55934;      /* Deep Orange-Red */
+  --color-secondary: #FF6F00;    /* Bright Amber */
+  --color-brand-gray: #8C8787;   /* Neutral Gray */
+  --color-background: #000000;   /* Pure Black */
+  --color-surface: #121212;      /* Off-black for cards */
+  --color-white: #FFFFFF;
+}
+
+/* Apply the background color globally */
+body {
+  background-color: var(--color-background);
+  color: var(--color-white);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Optional: Custom utility to replicate the fade-in animation we used */
+@utility animate-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
