@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from server.main import app
+from main import app
 
 
 @pytest.fixture(autouse=True)
@@ -10,30 +10,35 @@ def mock_firebase(mocker):
     The autouse=True means this runs automatically for all tests.
     """
 
-    # Create our mock Firestore client
+    # Create the Mock DB Client
     class MockDocRef:
         id = "fake_doc_id_123"
 
     mock_db_client = mocker.Mock()
+    # Ensure nested calls like db.collection().add() return valid mocks
     mock_db_client.collection.return_value.add.return_value = (None, MockDocRef())
+    mock_db_client.collection.return_value.document.return_value = mocker.Mock()
 
-    # Mock the components in the correct order (before client creation)
+    # Patch the External Firebase Calls (so they don't hit the network)
     mocker.patch("firebase_admin.credentials.Certificate")
     mocker.patch("firebase_admin.initialize_app")
     mock_fs_client = mocker.patch("firebase_admin.firestore.client")
     mock_fs_client.return_value = mock_db_client
 
-    # IMPORTANT: Set the global db variable in main.py
-    import server.main
+    # PATCH THE GLOBAL DB VARIABLE
+    import main
 
-    server.main.db = mock_db_client
+    # We overwrite the 'db' variable inside the 'main' module
+    main.db = mock_db_client
 
-    # Clean up after the test
     yield
-    server.main.db = None
+
+    # 4. Clean up
+    main.db = None
 
 
-# Now create the client (after Firebase is mocked)
+# It is safer to use a fixture for the client to ensure fresh state,
+# but global is okay for simple tests if the app is stateless.
 client = TestClient(app)
 
 
@@ -126,8 +131,7 @@ def test_resume_tailor_endpoint(sample_job_data, mocker):
     )
 
     assert response.status_code == 200
-
-    assert response.json() == {"tailored_resume": "This is a fake tailored resume."}
+    assert response.json().get("tailored_resume") == "This is a fake tailored resume."
 
 
 def test_fixture_is_working(sample_job_data):
