@@ -2,24 +2,25 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* Define our custom colors here */
-  /* These automatically become classes like bg-primary, text-secondary */
-  --color-primary: #E55934;      /* Deep Orange-Red */
-  --color-secondary: #FF6F00;    /* Bright Amber */
-  --color-brand-gray: #8C8787;   /* Neutral Gray */
-  --color-background: #000000;   /* Pure Black */
-  --color-surface: #121212;      /* Off-black for cards */
-  --color-white: #FFFFFF;
+/* MAIN BRAND COLORS */
+  --color-primary: #E55934;      /* High-Vis Orange (The Hero Color) */
+  --color-secondary: #8C8787;    /* Brand Gray (Supporting Elements) */
+  
+  /* UI COLORS */
+  --color-background: #0a0a0a;   /* Very Dark Gray (Not pure black, softer) */
+  --color-surface: #1a1a1a;      /* Lighter Dark Gray (Cards/Inputs) */
+  --color-text-main: #FFFFFF;    /* Main Text */
+  --color-text-muted: #a3a3a3;   /* Secondary Text */
 }
 
 /* Apply the background color globally */
 body {
   background-color: var(--color-background);
-  color: var(--color-white);
+  color: var(--color-text-main);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Optional: Custom utility to replicate the fade-in animation we used */
+/* Custom Utilities */
 @utility animate-in {
   animation: fade-in 0.5s ease-out forwards;
 }
