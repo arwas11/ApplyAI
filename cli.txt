@@ -1,6 +1,0 @@
-# Make sure your virtual environment is active first!
-# source server/.venv/bin/activate
-
-PYTHONPATH=$PYTHONPATH:$(pwd)/server uvicorn server.main:app --reload --port 8000
-
-npm run dev
