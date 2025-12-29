@@ -60,64 +60,65 @@ export default function ResumeBuilder() {
   };
 
   return (
-    <form className="flex w-full max-w-2xl flex-col gap-4 p-4">
-      {/* Resume Text Area */}
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="resume"
-          className="text-lg font-semibold text-gray-200"
-        >
-          Your Base Resume
-        </label>
-        <textarea
-          id="resume"
-          rows={10}
-          className="rounded-md border border-gray-600 bg-gray-800 p-3 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          placeholder="Paste your full resume here..."
-          value={resume}
-          onChange={(e) => setResume(e.target.value)}
-        />
-      </div>
+    <form className="flex w-full max-w-4xl flex-col gap-8 animate-in">
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Resume Text Area */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="resume" className="text-lg font-semibold text-primary">
+            1. Your Base Resume
+          </label>
+          <textarea
+            id="resume"
+            rows={10}
+            className="rounded-xl border border-secondary/20 bg-surface p-4 text-white shadow-inner focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-secondary/50"
+            placeholder="Paste your full resume here..."
+            value={resume}
+            onChange={(e) => setResume(e.target.value)}
+          />
+        </div>
 
-      {/* Job Description Text Area */}
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="job-description"
-          className="text-lg font-semibold text-gray-200"
-        >
-          The Job Description
-        </label>
-        <textarea
-          id="job-description"
-          rows={10}
-          className="rounded-md border border-gray-600 bg-gray-800 p-3 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          placeholder="Paste the job description here..."
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
-        />
+        {/* Job Description Text Area */}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="job-description" className="text-lg font-semibold text-primary">
+            2. The Job Description
+          </label>
+          <textarea
+            id="job-description"
+            rows={10}
+            className="rounded-xl border border-secondary/20 bg-surface p-4 text-white shadow-inner focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-secondary/50"
+            placeholder="Paste the job description here..."
+            value={jobDescription}
+            onChange={(e) => setJobDescription(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Submit Button */}
       <button
         type="submit"
-        className="rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+        className="self-center w-full md:w-1/2 rounded-full bg-primary px-6 py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 hover:bg-orange-600 hover:scale-[1.02] transition-all focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
         onClick={handleSubmit}
-        disabled={isLoading} // Disable button while loading
+        disabled={isLoading}
       >
-        {isLoading ? "Tailoring..." : "Tailor My Resume"}
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <span className="animate-spin">⏳</span> Tailoring...
+          </span>
+        ) : (
+          "✨ Generate Tailored Resume"
+        )}
       </button>
-
-      {/* --- UI FOR THE RESPONSE --- */}
 
       {/* Error Message */}
       {error && (
-        <div className="rounded-md border border-red-500 bg-red-900/20 p-4 text-red-300">
+        <div className="rounded-md border border-red-500 bg-red-900/20 p-4 text-red-200 text-center">
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {/* Tailored Resume Output */}
-      <ResumeDisplay tailoredResume={tailoredResume}  />
+      <ResumeDisplay tailoredResume={tailoredResume} />
     </form>
   );
 }
