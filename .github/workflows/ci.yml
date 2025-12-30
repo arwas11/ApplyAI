@@ -3,9 +3,9 @@ name: CI Pipeline
 # Trigger this workflow on Push to specific branches OR on Pull Requests to main
 on:
   push:
-    branches: [ "dev" ]
+    branches: ["dev"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   # --- JOB 1: Test the Frontend ---
@@ -16,31 +16,34 @@ jobs:
         working-directory: ./client
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '24'
-        cache: 'npm'
-        cache-dependency-path: client/package-lock.json
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Install Dependencies
+        run: npm ci
 
-    - name: Build (Checks for Type Errors)
-      run: npm run build
-      env:
-        # We add dummy vars because the build needs them, 
-        # we don't need real secrets just to check syntax.
-        NEXT_PUBLIC_API_URL: "http://localhost:8000"
-        NEXT_PUBLIC_FIREBASE_API_KEY: "dummy"
-        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "dummy"
-        NEXT_PUBLIC_FIREBASE_PROJECT_ID: "dummy"
-        NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "dummy"
-        NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "dummy"
-        NEXT_PUBLIC_FIREBASE_APP_ID: "dummy"
+      - name: Run Client Tests
+        run: npm test
+
+      - name: Build (Checks for Type Errors)
+        run: npm run build
+        env:
+          # We add dummy vars because the build needs them,
+          # we don't need real secrets just to check syntax.
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          NEXT_PUBLIC_FIREBASE_API_KEY: "dummy"
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: "dummy"
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: "dummy"
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: "dummy"
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "dummy"
+          NEXT_PUBLIC_FIREBASE_APP_ID: "dummy"
 
   # --- JOB 2: Test the Backend ---
   backend-test:
@@ -50,28 +53,28 @@ jobs:
         working-directory: ./server
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v4
+      - name: Check out code
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.13'
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+          cache: "pip"
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install httpx pytest # Ensure test tools are installed
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install httpx pytest # Ensure test tools are installed
 
-    - name: Run Tests
-      # We skip tests that require real Gemini credentials for now
-      # using the '-m "not integration"' marker if we had one, 
-      # or just basic unit tests.
-      run: |
-        pytest
-      env:
-        # Dummy keys so the app creates the 'client' object without crashing
-        GEMINI_API_KEY: "dummy_key"
-        GOOGLE_APPLICATION_CREDENTIALS: "dummy_creds.json"
+      - name: Run Tests
+        # We skip tests that require real Gemini credentials for now
+        # using the '-m "not integration"' marker if we had one,
+        # or just basic unit tests.
+        run: |
+          pytest
+        env:
+          # Dummy keys so the app creates the 'client' object without crashing
+          GEMINI_API_KEY: "dummy_key"
+          GOOGLE_APPLICATION_CREDENTIALS: "dummy_creds.json"
