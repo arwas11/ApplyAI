@@ -1,2 +1,31 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+@theme {
+/* MAIN BRAND COLORS */
+  --color-primary: #E55934;      /* High-Vis Orange (The Hero Color) */
+  --color-secondary: #8C8787;    /* Brand Gray (Supporting Elements) */
+  
+  /* UI COLORS */
+  --color-background: #0a0a0a;   /* Very Dark Gray (Not pure black, softer) */
+  --color-surface: #1a1a1a;      /* Lighter Dark Gray (Cards/Inputs) */
+  --color-text-main: #FFFFFF;    /* Main Text */
+  --color-text-muted: #a3a3a3;   /* Secondary Text */
+}
+
+/* Apply the background color globally */
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom Utilities */
+@utility animate-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -19,17 +19,21 @@ export default function ResumeDisplay({ tailoredResume }: ResumeDisplayProps) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-lg font-semibold text-gray-200">
-        Your Tailored Resume:
+    <div className="flex flex-col gap-2 mt-8 animate-in">
+      <h2 className="text-xl font-bold text-primary flex items-center gap-2">
+        <span className="text-2xl">✨</span> Your Tailored Resume
       </h2>
       
       {/* 4. The Styled Container */}
-      <div className="rounded-md border border-gray-600 bg-gray-800 p-4 text-gray-100">
+      <div className="rounded-xl border border-secondary/20 bg-surface p-6 shadow-2xl">
         
-        {/* 5. React Markdown renders the text as real HTML */}
-        {/* 'prose' and 'prose-invert' are Tailwind plugins for nice text formatting */}
-        <div className="prose prose-invert max-w-none">
+        {/* Prose Invert: Makes markdown look good on dark mode */}
+        {/* We override specific colors to match our theme */}
+        <div className="prose prose-invert max-w-none 
+          prose-headings:text-white 
+          prose-p:text-gray-300 
+          prose-strong:text-primary 
+          prose-li:text-gray-300">
           <ReactMarkdown>{tailoredResume}</ReactMarkdown>
         </div>
       </div>

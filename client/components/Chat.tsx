@@ -1,123 +1,105 @@
 "use client";
 import { useState } from "react";
-import type { MouseEvent } from "react";
-import ResumeDisplay from "./ResumeDisplay"
+import ReactMarkdown from "react-markdown";
 
-// The URL for the deployed backend.
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+interface Message {
+  role: "user" | "ai";
+  content: string;
+}
 
-export default function Chat() {
-  // State for the user's input
-  const [resume, setResume] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-
-  // State for the API response
-  const [tailoredResume, setTailoredResume] = useState("");
+export default function Chat(){
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  const handleSend = async () => {
+    if (!input.trim()) return;
 
-
-  const handleSubmit = async (e : MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
+    const userMessage: Message = { role: "user", content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput("");
     setIsLoading(true);
-    setError(null);
-    setTailoredResume(""); // Clear previous results
 
-    // Use FormData because FastAPI endpoint expects Form()
-    const formData = new FormData();
-    formData.append("base_resume", resume);
-    formData.append("job_description", jobDescription);
-
-    try{
-      // Make the API call to /resumes endpoint
-      const response = await fetch(`${API_URL}/resumes`, {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMessage.content }),
       });
 
-      if (!response.ok) {
-        // Handle HTTP errors (e.g., 500 from the server)
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
+      if (!res.ok) throw new Error("Failed to fetch response");
 
-      const data = await response.json();
-
-      // Update state with the AI's response
-      setTailoredResume(data.tailored_resume);
-    } catch (err){
-      console.error("Fetch error:", err);
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("An unknown error occurred.");
-      }
+      const data = await res.json();
+      const aiMessage: Message = { role: "ai", content: data.reply || data.response };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", content: "Sorry, I encountered an error. Please try again." },
+      ]);
     } finally {
-      // Whether it worked or failed, we're done loading
       setIsLoading(false);
-    };
-
+    }
   };
 
-  return (
-    <form className="flex w-full max-w-2xl flex-col gap-4 p-4">
-      {/* Resume Text Area */}
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="resume"
-          className="text-lg font-semibold text-gray-200"
-        >
-          Your Base Resume
-        </label>
-        <textarea
-          id="resume"
-          rows={10}
-          className="rounded-md border border-gray-600 bg-gray-800 p-3 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          placeholder="Paste your full resume here..."
-          value={resume}
-          onChange={(e) => setResume(e.target.value)}
-        />
+  
+  return(
+ <div className="flex flex-col h-[600px] w-full max-w-2xl border border-brand-gray/30 bg-surface rounded-xl overflow-hidden shadow-2xl shadow-primary/10">
+      
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+        {messages.length === 0 && (
+          <div className="text-center text-brand-gray mt-20">
+            <p className="text-xl font-semibold text-white">Hi! I'm ApplyAI.</p>
+            <p className="text-sm">Ask me how to improve your resume or prepare for an interview.</p>
+          </div>
+        )}
+        
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`p-3 rounded-lg max-w-[80%] ${
+              msg.role === "user"
+                ? "bg-primary text-white self-end ml-auto shadow-md" 
+                : "bg-surface border border-brand-gray/30 text-brand-gray self-start"
+            }`}
+          >
+            {msg.role === "ai" ? (
+              <div className="prose prose-invert prose-p:text-brand-gray prose-headings:text-white text-sm">
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="whitespace-pre-wrap">{msg.content}</p>
+            )}
+          </div>
+        ))}
+        
+        {isLoading && (
+          <div className="self-start bg-surface border border-brand-gray/20 p-3 rounded-lg text-brand-gray text-sm animate-pulse">
+            Thinking...
+          </div>
+        )}
       </div>
 
-      {/* Job Description Text Area */}
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="job-description"
-          className="text-lg font-semibold text-gray-200"
-        >
-          The Job Description
-        </label>
-        <textarea
-          id="job-description"
-          rows={10}
-          className="rounded-md border border-gray-600 bg-gray-800 p-3 text-gray-100 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          placeholder="Paste the job description here..."
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
+      {/* Input Area */}
+      <div className="p-4 bg-background border-t border-brand-gray/20 flex gap-2">
+        <input
+          className="flex-1 bg-surface border border-brand-gray/30 rounded-md p-3 text-white placeholder-brand-gray focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="Type your message..."
+          disabled={isLoading}
         />
+        <button
+          onClick={handleSend}
+          disabled={isLoading}
+          className="bg-primary px-6 py-2 rounded-md text-white font-bold hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send
+        </button>
       </div>
-
-      {/* Submit Button */}
-      <button
-        type="submit"
-        className="rounded-md bg-blue-600 px-4 py-3 text-lg font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-        onClick={handleSubmit}
-        disabled={isLoading} // Disable button while loading
-      >
-        {isLoading ? "Tailoring..." : "Tailor My Resume"}
-      </button>
-
-      {/* --- UI FOR THE RESPONSE --- */}
-
-      {/* Error Message */}
-      {error && (
-        <div className="rounded-md border border-red-500 bg-red-900/20 p-4 text-red-300">
-          <strong>Error:</strong> {error}
-        </div>
-      )}
-
-      {/* Tailored Resume Output */}
-      <ResumeDisplay tailoredResume={tailoredResume}  />
-    </form>
+    </div>
   );
 }
