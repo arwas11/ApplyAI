@@ -17,18 +17,17 @@ def mock_firebase(mocker):
     mock_db_client = mocker.Mock()
     # Ensure nested calls like db.collection().add() return valid mocks
     mock_db_client.collection.return_value.add.return_value = (None, MockDocRef())
-    mock_db_client.collection.return_value.document.return_value = mocker.Mock()
+    # mock_db_client.collection.return_value.document.return_value = mocker.Mock()
 
     # Patch the External Firebase Calls (so they don't hit the network)
     mocker.patch("firebase_admin.credentials.Certificate")
     mocker.patch("firebase_admin.initialize_app")
-    mock_fs_client = mocker.patch("firebase_admin.firestore.client")
-    mock_fs_client.return_value = mock_db_client
+    mocker.patch("firebase_admin.firestore.client", return_value=mock_db_client)
 
-    # PATCH THE GLOBAL DB VARIABLE
+    # Patch the global db variable
     import main
 
-    # We overwrite the 'db' variable inside the 'main' module
+    # Overwrite the 'db' variable inside the 'main' module
     main.db = mock_db_client
 
     yield
@@ -37,9 +36,14 @@ def mock_firebase(mocker):
     main.db = None
 
 
-# It is safer to use a fixture for the client to ensure fresh state,
-# but global is okay for simple tests if the app is stateless.
-client = TestClient(app)
+@pytest.fixture
+def client():
+    """
+    Creates a fresh client for each test and triggers the lifespan
+    """
+
+    with TestClient(app) as c:
+        yield c
 
 
 # Fixture for sample job data
@@ -55,7 +59,7 @@ def sample_job_data():
     }
 
 
-def test_client_is_working():
+def test_client_is_working(client):
     """
     A simple "sanity check" test to make sure the client is working.
     We don't have a "/" route, so we expect a 404 "Not Found" error.
@@ -64,7 +68,7 @@ def test_client_is_working():
     assert response.status_code == 404
 
 
-def test_chat_endpoint(mocker):
+def test_chat_endpoint(client, mocker):
     """
     Tests the /chat endpoint.
     It uses 'mocker' to fake the Gemini AI call.
@@ -72,8 +76,7 @@ def test_chat_endpoint(mocker):
     """
 
     # --- ARRANGE (Mocks) ---
-
-    # Mock the Gemini Client API call
+    # Mock Gemini
     class MockGeminiResponse:
         text = "This is a fake AI response."
 
@@ -98,7 +101,7 @@ def test_chat_endpoint(mocker):
     mock_gemini_client.return_value.models.generate_content.assert_called_once()
 
 
-def test_resume_tailor_endpoint(sample_job_data, mocker):
+def test_resume_tailor_endpoint(client, sample_job_data, mocker):
     """
     Tests the /resumes endpoint.
 

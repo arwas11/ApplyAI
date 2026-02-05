@@ -3,7 +3,7 @@ name: CI Pipeline
 # Trigger this workflow on Push to specific branches OR on Pull Requests to main
 on:
   push:
-    branches: ["dev"]
+    branches: ["**"]
   pull_request:
     branches: ["main"]
 
