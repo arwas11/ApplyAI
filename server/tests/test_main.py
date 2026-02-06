@@ -17,7 +17,9 @@ def mock_firebase(mocker):
     mock_db_client = mocker.Mock()
     # Ensure nested calls like db.collection().add() return valid mocks
     mock_db_client.collection.return_value.add.return_value = (None, MockDocRef())
-    # mock_db_client.collection.return_value.document.return_value = mocker.Mock()
+
+    # Bypass the FileNotFoundError in main.py
+    mocker.patch("main.os.path.exists", return_value=True)
 
     # Patch the External Firebase Calls (so they don't hit the network)
     mocker.patch("firebase_admin.credentials.Certificate")
