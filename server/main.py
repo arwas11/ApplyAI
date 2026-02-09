@@ -269,8 +269,9 @@ async def read_resumes(user_id: str):
             history.append(
                 {
                     "id": doc.id,
-                    "originalResume": data.get("originalResume", []),
-                    "tailoredResume": data.get("tailoredResume", []),
+                    "jobDescription": data.get("jobDescription", ""),
+                    "originalResume": data.get("originalResume", ""),
+                    "tailoredResume": data.get("tailoredResume", ""),
                     "createdAt": data.get("createdAt") or datetime.datetime.now(),
                 }
             )

@@ -29,6 +29,7 @@ class ChatSessionResponse(BaseModel):
 
 class ResumeSessionResponse(BaseModel):
     id: str
+    jobDescription: str
     originalResume: str
     tailoredResume: str
     createdAt: datetime.datetime
