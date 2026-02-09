@@ -2,15 +2,22 @@ import datetime
 import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from typing import List
 
 from utils import log_time_decorator
+from models import (
+    ChatRequest,
+    ChatResponse,
+    ResumeTailorResponse,
+    ChatSessionResponse,
+    ResumeSessionResponse,
+)
 
 from fastapi import FastAPI, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google import genai
-from pydantic import BaseModel
 
 
 # --- Define db as None at the top level ---
@@ -77,25 +84,8 @@ app.add_middleware(
 )
 
 
-# --- Pydantic Models ---
-class ChatRequest(BaseModel):
-    message: str
-
-
-class ChatResponse(BaseModel):
-    response: str
-
-
-class ResumeTailorRequest(BaseModel):
-    base_resume: str
-    job_description: str
-
-
-class ResumeTailorResponse(BaseModel):
-    tailored_resume: str
-
-
 # --- API Endpoints ---
+# --- Post Chat Endpoint ---
 @app.post(
     "/chat", response_model=ChatResponse, summary="Handles Chat with Gemini AI Agent"
 )
@@ -115,6 +105,7 @@ async def chat_with_agent(request: ChatRequest):
 
     try:
         user_message = request.message
+        uid = request.user_id if request.user_id else None
 
         # Create a single client object
         client = genai.Client()
@@ -127,25 +118,20 @@ async def chat_with_agent(request: ChatRequest):
         # Extract the AI's reply from the response
         ai_reply = response.text
 
-        # Use a temporary, hardcoded user ID
-        temp_user_id = "user_abc_123"  # In a real app, use actual user IDs
+        # Only save to DB if we have a real user
+        if uid and db:
+            chat_data = {
+                "user_id": uid,
+                "messages": [
+                    {"role": "user", "content": user_message},
+                    {"role": "ai", "content": ai_reply},
+                ],
+                "timestamp": firestore.SERVER_TIMESTAMP,
+            }
+            # Capture the return value
+            doc_ref = db.collection("chats").add(chat_data)
 
-        # Save the conversation to Firestore
-        chat_data = {
-            "userId": temp_user_id,
-            "messages": [
-                {"role": "user", "content": user_message},
-                {"role": "ai", "content": ai_reply},
-            ],
-            "timestamp": firestore.SERVER_TIMESTAMP,
-        }
-
-        # Use the db client to add the data to a 'chats' collection.
-        # Firestore will automatically create the collection if it doesn't exist.
-        doc_ref = db.collection("chats").add(chat_data)
-
-        # This will print the ID of the new document to your terminal for confirmation.
-        print(f"Saved chat with ID: {doc_ref[1].id}")
+            print(f"Saved chat with ID: {doc_ref[1].id}")
 
         # 4. Return the model's response
         return ChatResponse(response=response.text)
@@ -153,18 +139,20 @@ async def chat_with_agent(request: ChatRequest):
     except Exception as e:
         print(f"An error occured: {e}")
         raise HTTPException(
-            status_code=500, detail="Failed to get reponst from AI model"
+            status_code=500, detail="Failed to get response from AI model"
         )
 
 
-# --- Resumes Endpoint ---
+# --- Post Resumes Endpoint ---
 @app.post(
     "/resumes",
     response_model=ResumeTailorResponse,
     summary="Generates a tailored resume",
 )
 @log_time_decorator
-async def generate_resume(base_resume: str = Form(), job_description: str = Form()):
+async def generate_resume(
+    base_resume: str = Form(), job_description: str = Form(), user_id: str = Form()
+):
     """
     Endpoint to tailor a resume for a specific job description using Gemini AI.
     This endpoint accepts form data, making it easy to paste multi-line text.
@@ -209,12 +197,12 @@ async def generate_resume(base_resume: str = Form(), job_description: str = Form
         tailored_resume_obj = ResumeTailorResponse(tailored_resume=response.text)
 
         resume_record = {
-            "userId": "demo_user_123",
+            "user_id": user_id,
             "originalResume": base_resume,
             "jobDescription": job_description,
             "tailoredResume": tailored_resume_obj.tailored_resume,
             "createdAt": datetime.datetime.now(datetime.timezone.utc),
-            "meta": {"modelUsed": "gemini-1.5-flash", "processingTimeMs": 1200},
+            "meta": {"modelUsed": "gemini-2.5-flash", "processingTimeMs": 1200},
         }
 
         # Save to Firestore
@@ -229,3 +217,66 @@ async def generate_resume(base_resume: str = Form(), job_description: str = Form
     except Exception as e:
         print(f"An error occurred: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate resume.")
+
+
+# --- Read Chats Endpoint ---
+@app.get("/chats/{user_id}", response_model=List[ChatSessionResponse])
+async def read_chats(user_id: str):
+    try:
+        # Query the collection for docs belonging to this user
+        # Ew also order them by timestamp so the newest (or oldest) show up correctly
+        query = (
+            db.collection("chats")
+            .where("user_id", "==", user_id)
+            .order_by("timestamp", direction=firestore.Query.DESCENDING)
+        )
+        docs = query.stream()
+
+        history = []
+
+        for doc in docs:
+            data = doc.to_dict()
+            history.append(
+                {
+                    "id": doc.id,
+                    "messages": data.get("messages", []),
+                    # Handle potential missing timestamps gracefully
+                    "timestamp": data.get("timestamp") or datetime.datetime.now(),
+                }
+            )
+
+        return history
+
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- Read Resume Endpoint ---
+@app.get("/resumes/{user_id}", response_model=List[ResumeSessionResponse])
+async def read_resumes(user_id: str):
+    try:
+        query = (
+            db.collection("tailored_resumes")
+            .where("user_id", "==", user_id)
+            .order_by("createdAt", direction=firestore.Query.DESCENDING)
+        )
+        docs = query.stream()
+        history = []
+
+        for doc in docs:
+            data = doc.to_dict()
+            history.append(
+                {
+                    "id": doc.id,
+                    "originalResume": data.get("originalResume", []),
+                    "tailoredResume": data.get("tailoredResume", []),
+                    "createdAt": data.get("createdAt") or datetime.datetime.now(),
+                }
+            )
+
+        return history
+
+    except Exception as e:
+        print(f"Error fetching history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
