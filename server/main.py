@@ -134,7 +134,7 @@ async def chat_with_agent(request: ChatRequest):
             print(f"Saved chat with ID: {doc_ref[1].id}")
 
         # 4. Return the model's response
-        return ChatResponse(response=response.text)
+        return ChatResponse(response=ai_reply)  # type: ignore
 
     except Exception as e:
         print(f"An error occured: {e}")

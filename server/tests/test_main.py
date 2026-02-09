@@ -88,7 +88,10 @@ def test_chat_endpoint(client, mocker):
     )
 
     # --- ACT ---
-    test_message = {"message": "Hello, AI!"}
+    test_message = {
+        "user_id": "test_user_1",
+        "message": "Hello, AI!",
+    }
 
     # NOW, when we call client.post(), the lifespan runs...
     # ...it calls the *mocked* firestore.client()...
@@ -130,6 +133,7 @@ def test_resume_tailor_endpoint(client, sample_job_data, mocker):
     response = client.post(
         "/resumes",
         data={
+            "user_id": "test_user_1",
             "base_resume": sample_job_data["base_resume"],
             "job_description": sample_job_data["job_description"],
         },
