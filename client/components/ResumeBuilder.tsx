@@ -1,13 +1,15 @@
 "use client";
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import ResumeDisplay from "./ResumeDisplay"
+import { useAuth } from "@/context/AuthContext";
+import ResumeDisplay from "./ResumeDisplay";
 
 // The URL for the deployed backend.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ResumeBuilder() {
   // State for the user's input
+  const { user } = useAuth();
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
 
@@ -16,9 +18,8 @@ export default function ResumeBuilder() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
-
-  const handleSubmit = async (e : MouseEvent<HTMLButtonElement>) => {
+  const handleSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
+    if (!user) return;
     e.preventDefault();
     setIsLoading(true);
     setError(null);
@@ -28,8 +29,9 @@ export default function ResumeBuilder() {
     const formData = new FormData();
     formData.append("base_resume", resume);
     formData.append("job_description", jobDescription);
+    formData.append("userId", user.uid);
 
-    try{
+    try {
       // Make the API call to /resumes endpoint
       const response = await fetch(`${API_URL}/resumes`, {
         method: "POST",
@@ -45,7 +47,7 @@ export default function ResumeBuilder() {
 
       // Update state with the AI's response
       setTailoredResume(data.tailored_resume);
-    } catch (err){
+    } catch (err) {
       console.error("Fetch error:", err);
       if (err instanceof Error) {
         setError(err.message);
@@ -55,17 +57,18 @@ export default function ResumeBuilder() {
     } finally {
       // Whether it worked or failed, we're done loading
       setIsLoading(false);
-    };
-
+    }
   };
 
   return (
     <form className="flex w-full max-w-4xl flex-col gap-8 animate-in">
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Resume Text Area */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="resume" className="text-lg font-semibold text-primary">
+          <label
+            htmlFor="resume"
+            className="text-lg font-semibold text-primary"
+          >
             1. Your Base Resume
           </label>
           <textarea
@@ -80,7 +83,10 @@ export default function ResumeBuilder() {
 
         {/* Job Description Text Area */}
         <div className="flex flex-col gap-2">
-          <label htmlFor="job-description" className="text-lg font-semibold text-primary">
+          <label
+            htmlFor="job-description"
+            className="text-lg font-semibold text-primary"
+          >
             2. The Job Description
           </label>
           <textarea
@@ -95,20 +101,35 @@ export default function ResumeBuilder() {
       </div>
 
       {/* Submit Button */}
-      <button
-        type="submit"
-        className="self-center w-full md:w-1/2 rounded-full bg-primary px-6 py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 hover:bg-orange-600 hover:scale-[1.02] transition-all focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
-        onClick={handleSubmit}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="animate-spin">⏳</span> Tailoring...
-          </span>
-        ) : (
-          "✨ Generate Tailored Resume"
-        )}
-      </button>
+      {!user ? (
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-secondary font-medium bg-secondary/10 px-4 py-2 rounded-lg border border-secondary/20">
+            🔒 Please <strong>Sign In</strong> to generate a tailored resume
+          </p>
+          <button
+            type="button"
+            disabled
+            className="self-center w-full md:w-1/2 rounded-full bg-brand-gray/50 px-6 py-4 text-lg font-bold text-white cursor-not-allowed"
+          >
+            ✨ Generate Tailored Resume
+          </button>
+        </div>
+      ) : (
+        <button
+          type="submit"
+          className="self-center w-full md:w-1/2 rounded-full bg-primary px-6 py-4 text-lg font-bold text-white shadow-lg shadow-primary/20 hover:bg-orange-600 hover:scale-[1.02] transition-all focus:outline-none focus:ring-4 focus:ring-primary/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={handleSubmit}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span> Tailoring...
+            </span>
+          ) : (
+            "✨ Generate Tailored Resume"
+          )}
+        </button>
+      )}
 
       {/* Error Message */}
       {error && (

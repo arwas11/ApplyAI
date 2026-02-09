@@ -1,3 +1,4 @@
+import datetime
 import pytest
 from fastapi.testclient import TestClient
 from main import app
@@ -88,7 +89,10 @@ def test_chat_endpoint(client, mocker):
     )
 
     # --- ACT ---
-    test_message = {"message": "Hello, AI!"}
+    test_message = {
+        "user_id": "test_user_1",
+        "message": "Hello, AI!",
+    }
 
     # NOW, when we call client.post(), the lifespan runs...
     # ...it calls the *mocked* firestore.client()...
@@ -130,6 +134,7 @@ def test_resume_tailor_endpoint(client, sample_job_data, mocker):
     response = client.post(
         "/resumes",
         data={
+            "user_id": "test_user_1",
             "base_resume": sample_job_data["base_resume"],
             "job_description": sample_job_data["job_description"],
         },
@@ -137,6 +142,85 @@ def test_resume_tailor_endpoint(client, sample_job_data, mocker):
 
     assert response.status_code == 200
     assert response.json().get("tailored_resume") == "This is a fake tailored resume."
+
+
+def test_read_chats(client):
+    """
+    Test retrieving chats for a specific user.
+
+    This test verifies that the GET /chats endpoint correctly retrieves all chat documents for a given user_id, returning them in the expected format with proper status code.
+    The test mocks the Firestore database chain (collection -> where -> order_by -> stream) to return a sample chat document containing user_id, messages, and timestamp.
+
+    Assertions:
+    - HTTP response status code is 200 (OK)
+    - Response contains at least one chat document
+    - Chat document has the correct ID
+    - Chat messages are properly included in the response
+    """
+    import main
+
+    class MockDoc:
+        id = "chat_doc_123"
+
+        def to_dict(self):
+            return {
+                "user_id": "test_user_1",
+                "messages": [
+                    {"role": "user", "content": "hi"},
+                    {"role": "ai", "content": "hello"},
+                ],
+                "timestamp": datetime.datetime.now(),
+            }
+
+    # Chain the mocks: db.collection().where().order_by().stream()
+    main.db.collection.return_value.where.return_value.order_by.return_value.stream.return_value = [
+        MockDoc()
+    ]
+    response = client.get("/chats/test_user_1")
+
+    data = response.json()
+
+    assert response.status_code == 200
+    assert len(data) > 0
+    assert data[0]["id"] == "chat_doc_123"
+    assert data[0]["messages"][0]["content"] == "hi"
+
+
+def test_read_resumes(client):
+    """
+    Test the GET /resumes/{user_id} endpoint to retrieve user's resume documents.
+
+    Verifies that:
+    - The endpoint returns a 200 status code
+    - The response contains at least one resume document
+    - Resume documents include the correct id and tailoredResume fields
+    - Documents are properly serialized from Firestore to JSON format
+    """
+    import main
+
+    class MockDoc:
+        id = "chat_doc_123"
+
+        def to_dict(self):
+            return {
+                "user_id": "test_user_1",
+                "jobDescription": "SWE",
+                "originalResume": "Python developer",
+                "tailoredResume": "SWE Python developer",
+                "createdAt": datetime.datetime.now(),
+            }
+
+    main.db.collection.return_value.where.return_value.order_by.return_value.stream.return_value = [
+        MockDoc()
+    ]
+
+    response = client.get("/resumes/test_user_1")
+    data = response.json()
+
+    assert response.status_code == 200
+    assert len(data) > 0
+    assert data[0]["id"] == "chat_doc_123"
+    assert data[0]["tailoredResume"] == "SWE Python developer"
 
 
 def test_fixture_is_working(sample_job_data):

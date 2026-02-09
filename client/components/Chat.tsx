@@ -1,15 +1,17 @@
 "use client";
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/context/AuthContext";
 
 interface Message {
   role: "user" | "ai";
   content: string;
 }
 
-export default function Chat(){
+export default function Chat() {
+  const { user } = useAuth();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSend = async () => {
@@ -19,49 +21,69 @@ export default function Chat(){
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
-
+    let res;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage.content }),
-      });
+      if (!user) {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMessage.content,
+            userId: "None",
+          }),
+        });
+      } else {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: userMessage.content,
+            userId: user?.uid,
+          }),
+        });
+      }
 
       if (!res.ok) throw new Error("Failed to fetch response");
 
       const data = await res.json();
-      const aiMessage: Message = { role: "ai", content: data.reply || data.response };
+      const aiMessage: Message = {
+        role: "ai",
+        content: data.reply || data.response,
+      };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { role: "ai", content: "Sorry, I encountered an error. Please try again." },
+        {
+          role: "ai",
+          content: "Sorry, I encountered an error. Please try again.",
+        },
       ]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  
-  return(
- <div className="flex flex-col h-[600px] w-full max-w-2xl border border-brand-gray/30 bg-surface rounded-xl overflow-hidden shadow-2xl shadow-primary/10">
-      
+  return (
+    <div className="flex flex-col h-[600px] w-full max-w-2xl border border-brand-gray/30 bg-surface rounded-xl overflow-hidden shadow-2xl shadow-primary/10">
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {messages.length === 0 && (
           <div className="text-center text-brand-gray mt-20">
             <p className="text-xl font-semibold text-white">Hi! I'm ApplyAI.</p>
-            <p className="text-sm">Ask me how to improve your resume or prepare for an interview.</p>
+            <p className="text-sm">
+              Ask me how to improve your resume or prepare for an interview.
+            </p>
           </div>
         )}
-        
+
         {messages.map((msg, idx) => (
           <div
             key={idx}
             className={`p-3 rounded-lg max-w-[80%] ${
               msg.role === "user"
-                ? "bg-primary text-white self-end ml-auto shadow-md" 
+                ? "bg-primary text-white self-end ml-auto shadow-md"
                 : "bg-surface border border-brand-gray/30 text-brand-gray self-start"
             }`}
           >
@@ -74,7 +96,7 @@ export default function Chat(){
             )}
           </div>
         ))}
-        
+
         {isLoading && (
           <div className="self-start bg-surface border border-brand-gray/20 p-3 rounded-lg text-brand-gray text-sm animate-pulse">
             Thinking...
