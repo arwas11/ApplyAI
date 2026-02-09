@@ -222,6 +222,24 @@ async def generate_resume(
 # --- Read Chats Endpoint ---
 @app.get("/chats/{user_id}", response_model=List[ChatSessionResponse])
 async def read_chats(user_id: str):
+    """
+    Retrieve all chat histories for a specific user from Firestore.
+    Queries the 'chats' collection for all documents belonging to the given user_id,
+    ordered by timestamp in descending order (newest first).
+
+    Args:
+        user_id (str): The unique identifier of the user whose chats are to be retrieved.
+
+    Returns:
+        list: A list of dictionaries, each containing:
+            - id (str): The document ID of the chat
+            - messages (list): The list of messages in the chat (empty list if not present)
+            - timestamp (datetime): The timestamp of the chat (defaults to current time if missing)
+
+    Raises:
+        HTTPException: If an error occurs while fetching from Firestore, returns a 500 status code
+            with the error message as detail.
+    """
     try:
         # Query the collection for docs belonging to this user
         # Ew also order them by timestamp so the newest (or oldest) show up correctly
@@ -255,6 +273,24 @@ async def read_chats(user_id: str):
 # --- Read Resume Endpoint ---
 @app.get("/resumes/{user_id}", response_model=List[ResumeSessionResponse])
 async def read_resumes(user_id: str):
+    """
+    Retrieve all tailored resumes for a specific user from the database.
+
+    Args:
+        user_id (str): The unique identifier of the user whose resumes to fetch.
+
+    Returns:
+        list: A list of dictionaries containing resume data, each with the following keys:
+            - id (str): The document ID of the tailored resume.
+            - jobDescription (str): The job description used to tailor the resume.
+            - originalResume (str): The original resume content before tailoring.
+            - tailoredResume (str): The tailored resume content.
+            - createdAt (datetime): The timestamp when the resume was created.
+
+    Raises:
+        HTTPException: If an error occurs while fetching data from the database,
+            returns a 500 Internal Server Error with the error details.
+    """
     try:
         query = (
             db.collection("tailored_resumes")
