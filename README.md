@@ -34,9 +34,6 @@ graph TD;
     BE -->|Prompt/Text| Gemini[Google Gemini AI];
 ```
 
-To ensure VS Code recognizes the formatting immediately, I have placed the remaining content inside a single block. Copy everything from the box below and paste it directly after your Mermaid diagram.
-
-Markdown
 ### Stack & Rationale
 
 * **Frontend:** **React (Next.js 15)** + **TypeScript** + **Tailwind CSS**
@@ -119,8 +116,8 @@ The backend is deployed to **Google Cloud Run**. The frontend is currently local
 - [x] **Phase 2:** Firebase Authentication & Global Context.
 - [x] **Phase 3:** Backend Persistence (Firestore) & Naming Convention Alignment.
 - [x] **Phase 4:** Mocked Test Infrastructure & History API Endpoints.
-- [ ] **Phase 5:** Frontend Hydration (Displaying historical chats/resumes in the UI).
-- [ ] **Phase 6:** Production Deployment (Cloud Run & Vercel).
+- [x] **Phase 5:** Frontend Hydration (Displaying historical chats/resumes in the UI).
+- [x] **Phase 6:** Production Deployment (Cloud Run & Vercel).
 
 ## License
 
