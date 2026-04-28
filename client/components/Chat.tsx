@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "@/context/AuthContext";
 
@@ -8,11 +8,40 @@ interface Message {
   content: string;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
 export default function Chat() {
   const { user } = useAuth();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (!user) return;
+      setIsLoading(true);
+      try{
+        const res = await fetch(`${API_URL}/chats/${user.uid}`)
+        if (!res.ok) {throw new Error("Failed to load history")}
+        const history = await res.json();
+
+        const historicalMessages = history.flatMap((session: any) => 
+          session.messages.map((m: any) => ({
+            role: m.role,
+            content: m.content
+          }))
+        ).reverse(); // if the api orders newest-first but ui wants oldest-first
+
+        setMessages(historicalMessages);
+      } catch (error) {
+        console.error("History fetch error:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchChatHistory()
+  }, [user])
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -24,21 +53,21 @@ export default function Chat() {
     let res;
     try {
       if (!user) {
-        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+        res = await fetch(`${API_URL}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userMessage.content,
-            userId: "None",
+            user_id: "None",
           }),
         });
       } else {
-        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+        res = await fetch(`${API_URL}/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message: userMessage.content,
-            userId: user?.uid,
+            user_id: user?.uid,
           }),
         });
       }

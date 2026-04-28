@@ -65,10 +65,10 @@ def sample_job_data():
 def test_client_is_working(client):
     """
     A simple "sanity check" test to make sure the client is working.
-    We don't have a "/" route, so we expect a 404 "Not Found" error.
+    We now have a "/" route, so we expect a 200 "OK" success code.
     """
     response = client.get("/")
-    assert response.status_code == 404
+    assert response.status_code == 200
 
 
 def test_chat_endpoint(client, mocker):

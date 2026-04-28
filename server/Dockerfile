@@ -8,12 +8,12 @@ WORKDIR /app
 # This fixes "ModuleNotFoundError" by allowing main.py to import utils.py
 ENV PYTHONPATH "${PYTHONPATH}:/app"
 
-# Copy the requirements file *from the server subdirectory*
-COPY server/requirements.txt .
+# Copy the requirements file from the server subdirectory*
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire server directory *into* the /app directory
-COPY server/ .
+COPY . .
 
 # Tell Docker that the container will listen on port 8000
 EXPOSE 8000

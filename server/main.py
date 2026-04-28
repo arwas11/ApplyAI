@@ -86,6 +86,11 @@ app.add_middleware(
 
 # --- API Endpoints ---
 # --- Post Chat Endpoint ---
+@app.get("/")
+async def root():
+    return {"status": "ApplyAI API is online", "version": "1.0.0"}
+
+
 @app.post(
     "/chat", response_model=ChatResponse, summary="Handles Chat with Gemini AI Agent"
 )

@@ -1,8 +1,11 @@
 # Git and OS files
 .git
 .DS_Store
-*.json
+!server/*.json 
+
+# Secrets
 .env
+server/.env
 
 # VSCode
 .vscode/
@@ -15,9 +18,10 @@ __pycache__/
 .venv/
 server/.venv/
 
-# Tests
+# Tests & Infrastructure
 server/tests/
 pytest.ini
+.github/
 
 # Client folder
 client/
