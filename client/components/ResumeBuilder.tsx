@@ -1,10 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ResumeDisplay from "./ResumeDisplay";
 
-// The URL for the deployed backend.
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ResumeBuilder() {
@@ -17,6 +16,7 @@ export default function ResumeBuilder() {
   const [tailoredResume, setTailoredResume] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState([])
 
   const handleSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
     if (!user) return;
@@ -29,7 +29,7 @@ export default function ResumeBuilder() {
     const formData = new FormData();
     formData.append("base_resume", resume);
     formData.append("job_description", jobDescription);
-    formData.append("userId", user.uid);
+    formData.append("user_id", user.uid);
 
     try {
       // Make the API call to /resumes endpoint
@@ -59,6 +59,47 @@ export default function ResumeBuilder() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user) {
+      setHistory([]); // Clear history on logout
+      return
+    };
+
+    const fetchResumeHistory = async () => {
+      setIsLoading(true);
+
+      try {
+        const res = await fetch(`${API_URL}/resumes/${user.uid}`)
+
+        if (!res.ok) throw new Error("Filed to fetch resume history")
+
+        const history = await res.json()
+
+        const historicalMessages = history.map((session: any) => ({
+            jobDescription: session.jobDescription,
+            originalResume: session.originalResume,
+            tailoredResume: session.tailoredResume,
+          })
+        ).reverse()
+
+        setHistory(historicalMessages)
+
+        // Show latest resume on load
+        if (historicalMessages.length > 0) {
+          setTailoredResume(historicalMessages[0].tailored_resume)
+        }
+
+      } catch (error) {
+        console.error("History fetch error:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    };
+
+    fetchResumeHistory()
+  }, [user])
+
 
   return (
     <form className="flex w-full max-w-4xl flex-col gap-8 animate-in">
