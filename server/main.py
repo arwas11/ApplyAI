@@ -72,7 +72,7 @@ app = FastAPI(lifespan=lifespan)
 # Define the "origins" (websites) that are allowed to talk to the API
 origins = [
     "http://localhost:3000",  # local frontend
-    # "https://prod-frontend-url.com" # We'll add this later
+    "https://apply-ai-chi.vercel.app",
 ]
 
 app.add_middleware(

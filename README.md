@@ -2,6 +2,10 @@
 
 ApplyAI is a cloud-native, AI-powered assistant that helps streamline the job search. The MVP focuses on shortening application time, increasing application volume, and improving the quality of each submission by providing AI-driven resume tailoring and conversational career guidance.
 
+## 🔗 Live Links
+* **Production Web App:** [https://apply-ai-chi.vercel.app](https://apply-ai-chi.vercel.app)
+* **API Documentation:** [https://applyai-backend-service-296648600803.us-central1.run.app/docs](https://applyai-backend-service-296648600803.us-central1.run.app/docs)
+
 ## Project Gallery
 
 <p align="center">
