@@ -2,6 +2,14 @@
 
 ApplyAI is a cloud-native, AI-powered assistant that helps streamline the job search. The MVP focuses on shortening application time, increasing application volume, and improving the quality of each submission by providing AI-driven resume tailoring and conversational career guidance.
 
+## Project Gallery
+
+<p align="center">
+  <img src="docs/screenshots/applyai1.png" width="32%" alt="Landing Page" title="Landing Page" />
+  <img src="docs/screenshots/applyai2.png" width="32%" alt="AI Career Chat" title="AI Career Chat" />
+  <img src="docs/screenshots/applyai3.png" width="32%" alt="Resume Tailoring" title="Resume Tailoring" />
+</p>
+
 ## Table of contents
 
 - [Overview & Goals](#overview--goals)
@@ -34,20 +42,18 @@ graph TD;
     BE -->|Prompt/Text| Gemini[Google Gemini AI];
 ```
 
-### Stack & Rationale
+### The Stack
 
-* **Frontend:** **React (Next.js 15)** + **TypeScript** + **Tailwind CSS**
-  * Modern, type-safe UI with efficient client-side routing and global state management via React Context.
-* **Auth:** **Firebase Authentication** (Google OAuth)
-  * Secure identity management that provides unique UIDs to link data across the stack.
-* **Backend:** **Python 3.12** + **FastAPI**
-  * High-performance, asynchronous framework optimized for I/O-bound tasks like AI model inference.
-* **AI Model:** **Google Gemini 2.5 Flash**
-  * Utilized for both conversational "Career Coach" interactions and complex "Resume Tailoring" logic.
-* **Database:** **Google Firestore (NoSQL)**
-  * A serverless document database used to persist user-specific chat history and resume generation sessions.
-* **DevOps:** **GitHub Actions** + **Pytest**
-  * Automated CI/CD pipeline ensuring code quality and 100% mocked backend testing.
+- **Frontend:** **Next.js 15** (Node v24.2)
+  - *Rationale:* Leveraging the latest App Router for high-performance React patterns and Tailwind CSS for a modular design system.
+- **Backend:** **FastAPI 0.119** (Python 3.13.11)
+  - *Rationale:* An asynchronous-first framework providing high-speed execution for AI orchestration and strict data validation via **Pydantic v2**.
+- **AI Orchestration:** **Google Gemini 2.5 Flash**
+  - *Rationale:* Selected for its industry-leading context window and low-latency response times for complex resume-tailoring tasks.
+- **Database & Auth:** **Google Firebase / Cloud Firestore**
+  - *Rationale:* Unified identity management and real-time NoSQL document storage for chat history persistence.
+- **Infrastructure:** **Docker** + **Google Cloud Run**
+  - *Rationale:* Auto-scaling containerized backend that scales to zero when not in use, optimizing for performance and cost.
 
 ## Core Features
 
@@ -80,14 +86,14 @@ graph TD;
 ## Getting Started (Local Development)
 
 ### Prerequisites
-* Python 3.12+ / Node.js 18+
+* Python 3.13.11+ / Node.js 24+
 * Google Cloud Service Account with Firestore and Gemini API access.
 
 ### 1) Backend (`server/`)
 1. `cd server && python3 -m venv .venv && source .venv/bin/activate`
 2. `pip install -r requirements.txt`
 3. Create `.env` with `GEMINI_API_KEY` and `GOOGLE_APPLICATION_CREDENTIALS`.
-4. Run: `PYTHONPATH=. uvicorn main:app --reload --port 8000`
+4. Run: `uvicorn main:app --reload --port 8000`
 
 ### 2) Frontend (`client/`)
 1. `cd client && npm install`
