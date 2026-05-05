@@ -4,7 +4,6 @@ ApplyAI is a cloud-native, AI-powered assistant that helps streamline the job se
 
 ## 🔗 Live Links
 * **Production Web App:** [https://apply-ai-ny.vercel.app](https://apply-ai-ny.vercel.app)
-* **API Documentation:** [https://applyai-backend-service-296648600803.us-central1.run.app/docs](https://applyai-backend-service-296648600803.us-central1.run.app/docs)
 
 ## Project Gallery
 
